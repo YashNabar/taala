@@ -4,14 +4,148 @@
  * This is a general purpose Gradle build.
  * Learn more about Gradle by exploring our samples at https://docs.gradle.org/7.4.2/samples
  */
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import static org.gradle.api.JavaVersion.VERSION_11
+import static org.gradle.jvm.toolchain.JavaLanguageVersion.of
 
 plugins {
-    id 'org.jetbrains.kotlin.jvm' apply false
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.allopen' apply false
+    id 'org.jetbrains.kotlin.plugin.jpa' apply false
     id 'org.jetbrains.kotlin.plugin.noarg' apply false
-    id 'io.gitlab.arturbosch.detekt' apply false
+    id 'io.gitlab.arturbosch.detekt'
     id 'org.jetbrains.dokka'
 }
 
 repositories {
     mavenCentral()
+}
+
+def releaseType = System.getenv('RELEASE_TYPE') ?: "SNAPSHOT"
+def javaVersion = VERSION_11
+
+subprojects {
+    buildscript {
+        configurations.classpath {
+            // Force Gradle to use latest SNAPSHOT plugins.
+            resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+        }
+    }
+
+    version rootProject.version
+
+    pluginManager.withPlugin('java') {
+        java {
+            toolchain {
+                languageVersion = of(javaVersion.majorVersion.toInteger())
+            }
+
+            if (releaseType != 'GA' && releaseType != 'RC') {
+                withSourcesJar()
+            }
+        }
+    }
+
+    pluginManager.withPlugin('org.jetbrains.kotlin.jvm') {
+        apply plugin: 'io.gitlab.arturbosch.detekt'
+        apply plugin: 'org.jetbrains.dokka'
+
+        dependencies {
+            // Test libraries -> keep consistent across modules
+            testImplementation "org.jetbrains.kotlin:kotlin-test"
+            testImplementation("org.mockito.kotlin:mockito-kotlin")
+
+            testImplementation "org.junit.jupiter:junit-jupiter"
+
+            // Test runtime libraries -> also keep consistent
+            testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
+
+            detektPlugins "io.gitlab.arturbosch.detekt:detekt-formatting"
+        }
+
+        // Making all persistence entity open and with an empty constructor to allow Hibernate to work.
+        apply plugin: 'kotlin-allopen'
+        allOpen {
+            annotations(
+                    "javax.persistence.Entity",
+                    "javax.persistence.Embeddable",
+                    "javax.persistence.MappedSuperclass"
+            )
+        }
+        apply plugin: 'kotlin-jpa'
+
+        tasks.withType(KotlinCompile).configureEach {
+            kotlinOptions {
+                allWarningsAsErrors = true
+                languageVersion = '1.7'
+                apiVersion = '1.7'
+                verbose = true
+                jvmTarget = javaVersion
+                freeCompilerArgs += [
+                        "-Xjvm-default=all",
+                        "-java-parameters"
+                ]
+            }
+        }
+
+        tasks.named("detekt").configure {
+            if(file("$projectDir/detekt-baseline.xml").exists()){
+                baseline = file("$projectDir/detekt-baseline.xml")
+            }
+            config.setFrom(files("$rootDir/detekt-config.yml"))
+            parallel = true
+            reports {
+                xml{
+                    outputLocation.set(file("$projectDir/build/detekt-report.xml"))
+                }
+                txt.required.set(false)
+                sarif.required.set(false)
+                html.required.set(false)
+            }
+        }
+
+        tasks.register('javadocJar', Jar) {
+            description = 'Create JavaDoc Jar from dokka docs'
+            group = 'documentation'
+
+            dependsOn(dokkaHtml)
+            archiveBaseName = jar.archiveBaseName
+            archiveClassifier.set("javadoc")
+            from(dokkaHtml.outputDirectory)
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        def compilerArgs = options.compilerArgs
+        compilerArgs << '-parameters'
+
+        options.encoding = 'UTF-8'
+    }
+
+    // Added to support junit5 tests
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform(){
+            excludeTags project.hasProperty('runUnstableTests') ? 'runAllTestsNoExclusions' : 'Unstable'
+        }
+
+        doFirst {
+            // Create all temporary files within the build directory.
+            systemProperty 'java.io.tmpdir', buildDir.absolutePath
+        }
+    }
+
+    tasks.register('compileAll') { task ->
+        description = "Compiles all the Kotlin and Java classes, including all of the test classes."
+        group = "verification"
+
+        task.dependsOn tasks.withType(AbstractCompile)
+    }
+
+    tasks.register('allDependencyInsight', DependencyInsightReportTask)
+    tasks.register('allDependencies', DependencyReportTask)
+}
+
+wrapper {
+    gradleVersion = '7.4.2'
+    distributionType = Wrapper.DistributionType.BIN
 }
