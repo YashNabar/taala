@@ -1,0 +1,32 @@
+package keystore.entry
+
+import java.security.PrivateKey
+import java.security.cert.Certificate
+import javax.persistence.Entity
+import javax.persistence.Table
+import keystore.entity.KeyStoreEntity
+
+@Entity
+@Table(name = "private_key_entry")
+class PrivateKeyEntry(
+    alias: String,
+    privateKey: PrivateKey,
+    chain: List<Certificate>
+) : KeyStoreEntity(alias, privateKey, chain, secretKey = null) {
+
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other == null) return false
+        if (other !is PrivateKeyEntry) return false
+        return other.alias == this.alias
+                && other.privateKey == this.privateKey
+                && other.chain == this.chain
+    }
+
+    override fun hashCode(): Int {
+        var result = alias.hashCode()
+        result = 31 * result + privateKey!!.hashCode()
+        result = 31 * result + chain!!.hashCode()
+        return result
+    }
+}

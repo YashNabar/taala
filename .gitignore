@@ -6,3 +6,6 @@ build
 
 # Ignore IntelliJ IDEA files
 .idea
+
+# Ignore Mac metadata
+.DS_Store

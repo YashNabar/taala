@@ -1,5 +1,5 @@
 description 'Keystore persistence'
 
 dependencies {
-
+    implementation "javax.persistence:javax.persistence-api:$persistenceApiVersion"
 }
