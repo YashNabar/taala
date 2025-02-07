@@ -2,15 +2,13 @@ package keystore.entry
 
 import javax.crypto.SecretKey
 import javax.persistence.Entity
-import javax.persistence.Table
 import keystore.entity.KeyStoreEntity
 
 @Entity
-@Table(name = "secret_key_entry")
 class SecretKeyEntry(
     alias: String,
     secretKey: SecretKey
-) : KeyStoreEntity(alias, privateKey = null, chain = null, secretKey) {
+) : KeyStoreEntity(alias, privateKey = null, chain = null, secretKey, secretKey.algorithm) {
 
     override fun equals(other: Any?): Boolean {
         if (other === this) return true

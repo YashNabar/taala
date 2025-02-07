@@ -5,11 +5,13 @@ import java.security.PrivateKey
 import java.security.cert.Certificate
 import javax.crypto.SecretKey
 import javax.persistence.Column
+import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
-import javax.persistence.MappedSuperclass
+import javax.persistence.Table
 
-@MappedSuperclass
+@Entity
+@Table(name = "keystore_entry")
 class KeyStoreEntity(
     @Id
     @Column(name = "alias")
@@ -25,5 +27,8 @@ class KeyStoreEntity(
 
     @Lob
     @Column(name = "secret_key", nullable = true)
-    val secretKey: SecretKey?
+    val secretKey: SecretKey?,
+
+    @Column(name = "type")
+    val type: String,
 ) : Serializable
