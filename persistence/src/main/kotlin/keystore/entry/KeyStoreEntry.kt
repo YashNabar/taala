@@ -1,4 +1,4 @@
-package keystore.entity
+package keystore.entry
 
 import java.io.Serializable
 import java.security.PrivateKey
@@ -12,7 +12,7 @@ import javax.persistence.Table
 
 @Entity
 @Table(name = "keystore_entry")
-class KeyStoreEntity(
+class KeyStoreEntry(
     @Id
     @Column(name = "alias")
     val alias: String,

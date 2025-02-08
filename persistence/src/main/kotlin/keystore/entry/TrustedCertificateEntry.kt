@@ -2,13 +2,12 @@ package keystore.entry
 
 import java.security.cert.Certificate
 import javax.persistence.Entity
-import keystore.entity.KeyStoreEntity
 
 @Entity
 class TrustedCertificateEntry(
     alias: String,
     certificate: List<Certificate>
-) : KeyStoreEntity(alias, privateKey = null, certificate, secretKey = null, certificate.single().type) {
+) : KeyStoreEntry(alias, privateKey = null, certificate, secretKey = null, certificate.single().type) {
 
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
