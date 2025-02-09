@@ -1,14 +1,10 @@
 package keystore.entry
 
-import java.io.Serializable
-import java.security.PrivateKey
-import java.security.cert.Certificate
-import javax.crypto.SecretKey
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.Table
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Lob
+import jakarta.persistence.Table
 
 @Entity
 @Table(name = "keystore_entry")
@@ -19,16 +15,16 @@ class KeyStoreEntry(
 
     @Lob
     @Column(name = "private_key", nullable = true)
-    val privateKey: PrivateKey?,
+    val privateKey: ByteArray?,
 
     @Lob
     @Column(name = "certificate_chain", nullable = true)
-    var chain: List<Certificate>?,
+    val chain: ByteArray?,
 
     @Lob
     @Column(name = "secret_key", nullable = true)
-    val secretKey: SecretKey?,
+    val secretKey: ByteArray?,
 
     @Column(name = "type")
     val type: String,
-) : Serializable
+)
