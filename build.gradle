@@ -173,11 +173,10 @@ subprojects {
         }
     }
 
+    // Required for Hibernate
     allOpen {
         annotations(
-                "javax.persistence.Entity",
-                "javax.persistence.Embeddable",
-                "javax.persistence.MappedSuperclass"
+                "jakarta.persistence.Entity"
         )
     }
 }
