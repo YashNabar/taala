@@ -4,7 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     ignore:
       - dependency-name: "org.jetbrains.kotlin:kotlin-stdlib"
         versions: ["2.1.x"] # Ignore minor updates for Kotlin stdlib
