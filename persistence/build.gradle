@@ -1,9 +1,11 @@
 description 'Keystore persistence'
 
 dependencies {
-    implementation "com.h2database:h2:$h2Version"
-    implementation "jakarta.persistence:jakarta.persistence-api:$jakartaVersion"
-    implementation "org.hibernate:hibernate-core:$hibernateVersion"
+    implementation(libs.h2)
+    implementation(libs.jakarta)
+    implementation(libs.hibernate)
 
-    testImplementation "org.assertj:assertj-core:$assertjVersion"
+    testImplementation(libs.bundles.test)
+
+    testRuntimeOnly(libs.junit.engine)
 }

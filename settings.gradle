@@ -1,16 +1,6 @@
 pluginManagement {
     repositories {
-        maven { url "https://plugins.gradle.org/m2/" }
         gradlePluginPortal()
-    }
-
-    plugins {
-        id 'org.jetbrains.kotlin.jvm' version kotlinVersion
-        id 'org.jetbrains.kotlin.plugin.allopen' version kotlinVersion
-        id 'org.jetbrains.kotlin.plugin.jpa' version kotlinVersion
-        id 'org.jetbrains.kotlin.plugin.noarg' version kotlinVersion
-        id 'io.gitlab.arturbosch.detekt' version detektPluginVersion
-        id 'org.jetbrains.dokka' version dokkaVersion
     }
 }
 
