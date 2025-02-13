@@ -6,4 +6,6 @@ dependencies {
     implementation(libs.hibernate)
 
     testImplementation(libs.bundles.test)
+
+    testRuntimeOnly(libs.junit.engine)
 }
