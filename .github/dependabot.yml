@@ -6,8 +6,8 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 3
     ignore:
-      - dependency-name: "org.jetbrains.kotlin:kotlin-stdlib"
-        versions: ["2.1.x"] # Ignore minor updates for Kotlin stdlib
+      - dependency-name: "org.jetbrains.kotlin*"
+        versions: ["2.1.x"] # Ignore minor updates for Kotlin
     commit-message:
-      prefix: "build(deps)"
+      prefix: "build"
       include: "scope"
