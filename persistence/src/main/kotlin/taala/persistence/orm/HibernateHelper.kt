@@ -1,10 +1,10 @@
-package keystore.orm
+package taala.persistence.orm
 
 import java.util.Properties
-import keystore.entry.KeyStoreEntry
-import keystore.entry.PrivateKeyEntry
-import keystore.entry.SecretKeyEntry
-import keystore.entry.TrustedCertificateEntry
+import taala.persistence.entry.KeyStoreEntry
+import taala.persistence.entry.PrivateKeyEntry
+import taala.persistence.entry.SecretKeyEntry
+import taala.persistence.entry.TrustedCertificateEntry
 import org.hibernate.SessionFactory
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.cfg.Configuration

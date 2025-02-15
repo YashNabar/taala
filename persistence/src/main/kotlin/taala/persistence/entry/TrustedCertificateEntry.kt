@@ -1,4 +1,4 @@
-package keystore.entry
+package taala.persistence.entry
 
 import jakarta.persistence.Entity
 import java.security.cert.Certificate
