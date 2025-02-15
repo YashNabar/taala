@@ -1,4 +1,4 @@
-package keystore.entry
+package taala.persistence.entry
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

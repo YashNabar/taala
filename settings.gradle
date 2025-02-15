@@ -4,5 +4,5 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'database-keystore'
+rootProject.name = 'taala'
 include 'persistence'

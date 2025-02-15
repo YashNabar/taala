@@ -1,4 +1,4 @@
-package keystore.orm
+package taala.persistence.orm
 
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
