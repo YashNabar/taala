@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import taala.persistence.orm.HibernateHelper
 
 class HibernateHelperTest {
 
