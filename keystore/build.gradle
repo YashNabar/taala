@@ -1,0 +1,9 @@
+description 'Keystore implementation'
+
+dependencies {
+    implementation(project(":persistence"))
+
+    testImplementation(libs.bundles.test)
+
+    testRuntimeOnly(libs.junit.engine)
+}
