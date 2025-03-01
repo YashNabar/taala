@@ -2,6 +2,11 @@ description 'Keystore implementation'
 
 dependencies {
     implementation(project(":persistence"))
+    implementation(libs.jakarta)
+    implementation(libs.hibernate)
+    implementation(libs.slf4j.api)
+
+    runtimeOnly(libs.log4j.slf4j)
 
     testImplementation(libs.bundles.test)
 

@@ -3,10 +3,16 @@ package taala.keystore
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.Key
+import java.security.KeyStoreException
 import java.security.KeyStoreSpi
 import java.security.cert.Certificate
+import java.sql.SQLException
 import java.util.Date
 import java.util.Enumeration
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import taala.persistence.entry.TrustedCertificateEntry
+import taala.persistence.orm.HibernateHelper
 
 class KeyStoreImpl : KeyStoreSpi() {
     override fun engineGetKey(alias: String?, password: CharArray?): Key {
@@ -34,7 +40,27 @@ class KeyStoreImpl : KeyStoreSpi() {
     }
 
     override fun engineSetCertificateEntry(alias: String?, cert: Certificate?) {
-        throw UnsupportedOperationException()
+        requireNotNull(alias) { throw KeyStoreException("Alias was null. Certificate entry was not saved.") }
+        requireNotNull(cert) { throw KeyStoreException("Certificate was null. Certificate entry was not saved.") }
+
+        val entry = TrustedCertificateEntry(alias, cert)
+        HibernateHelper.sessionFactory.openSession().use { session ->
+            val transaction = session.beginTransaction()
+            try {
+                if (session.get(TrustedCertificateEntry::class.java, alias) == null) {
+                    logger.atDebug().log { "Adding new certificate entry to key store under alias '$alias'." }
+                    session.persist(entry)
+                } else {
+                    logger.atDebug().log { "Overwriting existing certificate entry in key store under alias '$alias'." }
+                    session.merge(entry)
+                }
+                transaction.commit()
+                logger.atInfo().log { "Saved certificate using alias '$alias'." }
+            } catch (e: SQLException) {
+                transaction.rollback()
+                throw KeyStoreException("Failed to save certificate entry. Cause: $e.")
+            }
+        }
     }
 
     override fun engineDeleteEntry(alias: String?) {
@@ -71,5 +97,9 @@ class KeyStoreImpl : KeyStoreSpi() {
 
     override fun engineLoad(stream: InputStream?, password: CharArray?) {
         throw UnsupportedOperationException()
+    }
+
+    private companion object {
+        val logger: Logger = LoggerFactory.getLogger(this::class.java.enclosingClass)
     }
 }

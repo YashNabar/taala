@@ -9,7 +9,7 @@ import org.hibernate.SessionFactory
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
 
-internal object HibernateHelper {
+object HibernateHelper {
     val sessionFactory: SessionFactory by lazy {
         StandardServiceRegistryBuilder().applySettings(getDbProperties()).build().run {
             Configuration()
