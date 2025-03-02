@@ -1,19 +1,24 @@
 package taala.keystore
 
+import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.Key
 import java.security.KeyStoreException
 import java.security.KeyStoreSpi
 import java.security.cert.Certificate
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
 import java.sql.SQLException
 import java.util.Date
 import java.util.Enumeration
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
 
+@Suppress("TooManyFunctions")
 class KeyStoreImpl : KeyStoreSpi() {
     override fun engineGetKey(alias: String?, password: CharArray?): Key {
         throw UnsupportedOperationException()
@@ -23,8 +28,19 @@ class KeyStoreImpl : KeyStoreSpi() {
         throw UnsupportedOperationException()
     }
 
-    override fun engineGetCertificate(alias: String?): Certificate {
-        throw UnsupportedOperationException()
+    override fun engineGetCertificate(alias: String?): Certificate? {
+        if (alias == null) return null
+        return try {
+            HibernateHelper.sessionFactory.openSession().use { session ->
+                val entry = session.get(TrustedCertificateEntry::class.java, alias) ?: session.get(PrivateKeyEntry::class.java, alias)
+                entry?.let {
+                    CertificateFactory.getInstance(it.certificateType).generateCertPath(ByteArrayInputStream(it.chain)).certificates.first()
+                }
+            }
+        } catch (e: CertificateException) {
+            logger.atError().log { "Failed to retrieve certificate with alias '$alias'. Cause: ${e.message}" }
+            null
+        }
     }
 
     override fun engineGetCreationDate(alias: String?): Date {

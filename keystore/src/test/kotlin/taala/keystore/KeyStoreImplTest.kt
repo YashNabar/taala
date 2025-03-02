@@ -20,91 +20,150 @@ import org.hibernate.Transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
 
 class KeyStoreImplTest {
-    @BeforeEach
-    fun setUpMocks() {
-        every { session.persist(any()) } just Runs
-    }
 
-    @Test
-    fun `given certificate with new alias, when engineSetCertificateEntry, then assigns certificate to alias`() {
-        every { session.get(TrustedCertificateEntry::class.java, KNOWN_ALIAS) } returns null
-        val entryCaptor = slot<TrustedCertificateEntry>()
-        every { session.persist(capture(entryCaptor)) } just Runs
+    @Nested
+    inner class TrustedCertificateTests {
+        @BeforeEach
+        fun setUpMocks() {
+            every { session.persist(any()) } just Runs
+        }
 
-        keyStore.engineSetCertificateEntry(KNOWN_ALIAS, newCertificate)
+        @Test
+        fun `given certificate with new alias, when engineSetCertificateEntry, then assigns certificate to alias`() {
+            every { session.get(TrustedCertificateEntry::class.java, KNOWN_ALIAS) } returns null
+            val entryCaptor = slot<TrustedCertificateEntry>()
+            every { session.persist(capture(entryCaptor)) } just Runs
 
-        with(entryCaptor.captured) {
-            assertSoftly { softly ->
-                softly.assertThat(this.alias).isEqualTo(KNOWN_ALIAS)
-                val certFromChain = certificateFactory.generateCertPath(ByteArrayInputStream(this.chain)).certificates.single()
-                softly.assertThat(certFromChain).isEqualTo(newCertificate)
-                softly.assertThat(this.type).isEqualTo(CERTIFICATE_TYPE)
-                softly.assertThat(this.secretKey).isNull()
-                softly.assertThat(this.privateKey).isNull()
+            keyStore.engineSetCertificateEntry(KNOWN_ALIAS, newCertificate)
+
+            with(entryCaptor.captured) {
+                assertSoftly { softly ->
+                    softly.assertThat(this.alias).isEqualTo(KNOWN_ALIAS)
+                    val certFromChain =
+                        certificateFactory.generateCertPath(ByteArrayInputStream(this.chain)).certificates.single()
+                    softly.assertThat(certFromChain).isEqualTo(newCertificate)
+                    softly.assertThat(this.certificateType).isEqualTo(CERTIFICATE_TYPE)
+                    softly.assertThat(this.secretKey).isNull()
+                    softly.assertThat(this.privateKey).isNull()
+                    softly.assertThat(this.keyType).isNull()
+                }
             }
         }
-    }
 
-    @Test
-    fun `given certificate with alias exists, when engineSetCertificateEntry, then overwrites existing certificate`() {
-        every { session.get(TrustedCertificateEntry::class.java, KNOWN_ALIAS) } returns TrustedCertificateEntry(
-            KNOWN_ALIAS, existingCertificate
-        )
-        val entryCaptor = slot<TrustedCertificateEntry>()
+        @Test
+        fun `given certificate with alias exists, when engineSetCertificateEntry, then overwrites existing certificate`() {
+            every { session.get(TrustedCertificateEntry::class.java, KNOWN_ALIAS) } returns TrustedCertificateEntry(
+                KNOWN_ALIAS, existingCertificate
+            )
+            val entryCaptor = slot<TrustedCertificateEntry>()
 
-        keyStore.engineSetCertificateEntry(KNOWN_ALIAS, newCertificate)
+            keyStore.engineSetCertificateEntry(KNOWN_ALIAS, newCertificate)
 
-        verify { session.merge(capture(entryCaptor)) }
-        with(entryCaptor.captured) {
-            assertSoftly { softly ->
-                softly.assertThat(this.alias).isEqualTo(KNOWN_ALIAS)
-                val certFromChain = certificateFactory.generateCertPath(ByteArrayInputStream(this.chain)).certificates.single()
-                softly.assertThat(certFromChain).isEqualTo(newCertificate)
-                softly.assertThat(this.type).isEqualTo(CERTIFICATE_TYPE)
-                softly.assertThat(this.secretKey).isNull()
-                softly.assertThat(this.privateKey).isNull()
+            verify { session.merge(capture(entryCaptor)) }
+            with(entryCaptor.captured) {
+                assertSoftly { softly ->
+                    softly.assertThat(this.alias).isEqualTo(KNOWN_ALIAS)
+                    val certFromChain =
+                        certificateFactory.generateCertPath(ByteArrayInputStream(this.chain)).certificates.single()
+                    softly.assertThat(certFromChain).isEqualTo(newCertificate)
+                    softly.assertThat(this.certificateType).isEqualTo(CERTIFICATE_TYPE)
+                    softly.assertThat(this.secretKey).isNull()
+                    softly.assertThat(this.privateKey).isNull()
+                    softly.assertThat(this.keyType).isNull()
+                }
             }
         }
-    }
 
-    @Test
-    fun `given persistence fails, when engineSetCertificateEntry, then throws exception`() {
-        val alias = "test"
-        every { session.get(TrustedCertificateEntry::class.java, alias) } returns null
-        every { session.persist(any()) } throws SQLException()
+        @Test
+        fun `given persistence fails, when engineSetCertificateEntry, then throws exception`() {
+            val alias = "test"
+            every { session.get(TrustedCertificateEntry::class.java, alias) } returns null
+            every { session.persist(any()) } throws SQLException()
 
-        val ex = assertThrows<KeyStoreException> {
-            keyStore.engineSetCertificateEntry(alias, newCertificate)
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetCertificateEntry(alias, newCertificate)
+            }
+            assertSoftly { softly ->
+                softly.assertThat(ex).hasMessageContaining("Failed to save certificate entry")
+                verify { tx.rollback() }
+            }
         }
-        assertSoftly { softly ->
-            softly.assertThat(ex).hasMessageContaining("Failed to save certificate entry")
-            verify { tx.rollback() }
-        }
-    }
 
-    @Test
-    fun `given alias is null, when engineSetCertificateEntry, then throws exception`() {
-        val ex = assertThrows<KeyStoreException> {
-            keyStore.engineSetCertificateEntry(alias = null, newCertificate)
+        @Test
+        fun `given alias is null, when engineSetCertificateEntry, then throws exception`() {
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetCertificateEntry(alias = null, newCertificate)
+            }
+            assertSoftly { softly ->
+                softly.assertThat(ex).hasMessageContaining("Alias was null")
+            }
         }
-        assertSoftly { softly ->
-            softly.assertThat(ex).hasMessageContaining("Alias was null")
-        }
-    }
 
-    @Test
-    fun `given certificate is null, when engineSetCertificateEntry, then throws exception`() {
-        val ex = assertThrows<KeyStoreException> {
-            keyStore.engineSetCertificateEntry(KNOWN_ALIAS, cert = null)
+        @Test
+        fun `given certificate is null, when engineSetCertificateEntry, then throws exception`() {
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetCertificateEntry(KNOWN_ALIAS, cert = null)
+            }
+            assertSoftly { softly ->
+                softly.assertThat(ex).hasMessageContaining("Certificate was null")
+            }
         }
-        assertSoftly { softly ->
-            softly.assertThat(ex).hasMessageContaining("Certificate was null")
+
+        @Test
+        fun `given certificate exists, when engineGetCertificate, then returns certificate`() {
+            every { session.get(TrustedCertificateEntry::class.java, any()) } returns TrustedCertificateEntry(
+                KNOWN_ALIAS, existingCertificate
+            )
+
+            val result = keyStore.engineGetCertificate(KNOWN_ALIAS)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isEqualTo(existingCertificate)
+            }
+        }
+
+        @Test
+        fun `given certificate chain exists for private key, when engineGetCertificate, then returns first certificate`() {
+            every { session.get(TrustedCertificateEntry::class.java, any()) } returns null
+            every { session.get(PrivateKeyEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, mockk(relaxed = true), listOf(existingCertificate)
+            )
+
+            val result = keyStore.engineGetCertificate(KNOWN_ALIAS)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isEqualTo(existingCertificate)
+            }
+        }
+
+        @Test
+        fun `given alias is null, when engineGetCertificate, then returns null`() {
+            val result = keyStore.engineGetCertificate(alias = null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+        }
+
+        @Test
+        fun `given alias does not exist, when engineGetCertificate, then returns null`() {
+            val alias = "unknown"
+            every { session.get(TrustedCertificateEntry::class.java, any()) } returns null
+            every { session.get(PrivateKeyEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineGetCertificate(alias)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
         }
     }
 

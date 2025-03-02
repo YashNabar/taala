@@ -8,6 +8,7 @@ import jakarta.persistence.Table
 
 @Entity
 @Table(name = "keystore_entry")
+@Suppress("LongParameterList")
 class KeyStoreEntry(
     @Id
     @Column(name = "alias")
