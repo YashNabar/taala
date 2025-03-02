@@ -13,5 +13,6 @@ class TrustedCertificateEntry(
     privateKey = null,
     CertificateFactory.getInstance(certificate.type).generateCertPath(listOf(certificate)).encoded,
     secretKey = null,
-    certificate.type
+    certificate.type,
+    keyType = null,
 )

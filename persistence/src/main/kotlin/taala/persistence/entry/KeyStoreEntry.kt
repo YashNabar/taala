@@ -25,6 +25,9 @@ class KeyStoreEntry(
     @Column(name = "secret_key", nullable = true)
     val secretKey: ByteArray?,
 
-    @Column(name = "type")
-    val type: String,
+    @Column(name = "certificate_type", nullable = true)
+    val certificateType: String?,
+
+    @Column(name = "key_type", nullable = true)
+    val keyType: String?,
 )
