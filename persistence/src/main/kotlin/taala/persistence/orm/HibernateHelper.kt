@@ -1,17 +1,17 @@
 package taala.persistence.orm
 
-import java.util.Properties
+import javax.sql.DataSource
+import org.hibernate.SessionFactory
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder
+import org.hibernate.cfg.Configuration
 import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
-import org.hibernate.SessionFactory
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder
-import org.hibernate.cfg.Configuration
 
-internal object HibernateHelper {
-    val sessionFactory: SessionFactory by lazy {
-        StandardServiceRegistryBuilder().applySettings(getDbProperties()).build().run {
+object HibernateHelper {
+    fun buildSessionFactory(datasource: DataSource): SessionFactory {
+        return StandardServiceRegistryBuilder().applySettings(getDbProperties(datasource)).build().run {
             Configuration()
                 .addAnnotatedClass(KeyStoreEntry::class.java)
                 .addAnnotatedClass(PrivateKeyEntry::class.java)
@@ -21,12 +21,9 @@ internal object HibernateHelper {
         }
     }
 
-    private fun getDbProperties() = Properties().apply {
-        setProperty("hibernate.dialect", "org.hibernate.dialect.H2Dialect")
-        setProperty("hibernate.connection.driver_class", "org.h2.Driver")
-        setProperty("hibernate.connection.url", "jdbc:h2:mem:keystore")
-        setProperty("hibernate.connection.username", "sa")
-        setProperty("hibernate.connection.password", "")
-        setProperty("hibernate.hbm2ddl.auto", "update")
-    }
+    private fun getDbProperties(datasource: DataSource) = mapOf(
+        "hibernate.connection.datasource" to datasource,
+        "hibernate.dialect" to "org.hibernate.dialect.PostgreSQLDialect",
+        "hibernate.hbm2ddl.auto" to "update"
+    )
 }
