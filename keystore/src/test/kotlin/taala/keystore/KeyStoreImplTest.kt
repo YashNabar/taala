@@ -13,6 +13,7 @@ import java.security.KeyStoreException
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.sql.SQLException
+import javax.sql.DataSource
 import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -186,14 +187,15 @@ class KeyStoreImplTest {
         val sessionFactory = mockk<SessionFactory> {
             every { openSession() } returns session
         }
+        val dataSource = mockk<DataSource>()
         lateinit var keyStore: KeyStoreImpl
 
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            keyStore = KeyStoreImpl()
+            keyStore = KeyStoreImpl(dataSource)
             mockkObject(HibernateHelper)
-            every { HibernateHelper.sessionFactory } returns sessionFactory
+            every { HibernateHelper.buildSessionFactory(any()) } returns sessionFactory
         }
 
         @JvmStatic

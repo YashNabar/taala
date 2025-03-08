@@ -12,6 +12,7 @@ import java.security.cert.CertificateFactory
 import java.sql.SQLException
 import java.util.Date
 import java.util.Enumeration
+import javax.sql.DataSource
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import taala.persistence.entry.PrivateKeyEntry
@@ -19,7 +20,11 @@ import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
 
 @Suppress("TooManyFunctions")
-class KeyStoreImpl : KeyStoreSpi() {
+class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
+    private val sessionFactory by lazy {
+        HibernateHelper.buildSessionFactory(dataSource)
+    }
+
     override fun engineGetKey(alias: String?, password: CharArray?): Key {
         throw UnsupportedOperationException()
     }
@@ -31,7 +36,7 @@ class KeyStoreImpl : KeyStoreSpi() {
     override fun engineGetCertificate(alias: String?): Certificate? {
         if (alias == null) return null
         return try {
-            HibernateHelper.sessionFactory.openSession().use { session ->
+            sessionFactory.openSession().use { session ->
                 val entry = session.get(TrustedCertificateEntry::class.java, alias) ?: session.get(PrivateKeyEntry::class.java, alias)
                 entry?.let {
                     CertificateFactory.getInstance(it.certificateType).generateCertPath(ByteArrayInputStream(it.chain)).certificates.first()
@@ -60,7 +65,7 @@ class KeyStoreImpl : KeyStoreSpi() {
         requireNotNull(cert) { throw KeyStoreException("Certificate was null. Certificate entry was not saved.") }
 
         val entry = TrustedCertificateEntry(alias, cert)
-        HibernateHelper.sessionFactory.openSession().use { session ->
+        sessionFactory.openSession().use { session ->
             val transaction = session.beginTransaction()
             try {
                 if (session.get(TrustedCertificateEntry::class.java, alias) == null) {
