@@ -1,11 +1,13 @@
 description 'Keystore persistence'
 
 dependencies {
-    implementation(libs.h2)
     implementation(libs.jakarta)
     implementation(libs.hibernate)
+    implementation(libs.hikari)
 
-    testImplementation(libs.bundles.test)
+    integrationTestImplementation(libs.bundles.test)
+    integrationTestImplementation(libs.test.containers)
 
-    testRuntimeOnly(libs.junit.engine)
+    integrationTestRuntimeOnly(libs.junit.engine)
+    integrationTestRuntimeOnly(libs.postgres.driver)
 }

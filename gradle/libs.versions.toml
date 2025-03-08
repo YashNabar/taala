@@ -1,13 +1,15 @@
 [versions]
 # Production dependency versions
-h2Version = "2.3.232"
 hibernateVersion = "6.6.6.Final"
+hikari = "5.1.0"
 jakartaVersion = "3.1.0"
 kotlinVersion = "2.1.0"
+postgres = "42.7.5"
 
 # Test dependency versions
 assertjVersion = "3.27.3"
 junit5Version = "5.11.4"
+test-containers = "1.20.5"
 
 # Build dependency versions
 dokkaVersion = "2.0.0"
@@ -15,14 +17,16 @@ detektVersion = "1.23.7"
 
 [libraries]
 # Production libraries
-h2 = { group = "com.h2database", name = "h2", version.ref = "h2Version" }
 hibernate = { group = "org.hibernate", name = "hibernate-core", version.ref = "hibernateVersion" }
+hikari = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikari" }
 jakarta = { group = "jakarta.persistence", name = "jakarta.persistence-api", version.ref = "jakartaVersion" }
+postgres-driver = { group = "org.postgresql", name = "postgresql", version.ref = "postgres"}
 
 # Test libraries
 assertj = { group = "org.assertj", name = "assertj-core", version.ref = "assertjVersion" }
 junit-api = { group = "org.junit.jupiter", name = "junit-jupiter-api", version.ref = "junit5Version" }
 junit-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit5Version" }
+test-containers = { module = "org.testcontainers:postgresql", version.ref = "test-containers" }
 
 # Build libraries
 
