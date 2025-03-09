@@ -111,7 +111,11 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineIsCertificateEntry(alias: String?): Boolean {
-        throw UnsupportedOperationException()
+        if (alias == null) return false
+        val entry = sessionFactory.openSession().use { session ->
+            session.get(TrustedCertificateEntry::class.java, alias)
+        }
+        return entry != null
     }
 
     override fun engineGetCertificateAlias(cert: Certificate?): String {

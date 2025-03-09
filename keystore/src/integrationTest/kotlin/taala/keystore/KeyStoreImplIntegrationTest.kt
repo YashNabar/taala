@@ -79,7 +79,7 @@ class KeyStoreImplIntegrationTest {
     }
 
     @Nested
-    inner class GetCertificateEntryTests {
+    inner class GetCertificateTests {
         @Test
         fun `given certificate exists, when engineGetCertificate, then returns certificate`() {
             HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
@@ -105,6 +105,29 @@ class KeyStoreImplIntegrationTest {
             val result = keyStore.engineGetCertificate(alias)
 
             assertThat(result).isEqualTo(existingCertificate)
+        }
+    }
+
+    @Nested
+    inner class IsCertificateEntryTests {
+        @Test
+        fun `given certificate exists for alias, when engineIsCertificateEntry, then returns true`() {
+            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+                val tx = session.beginTransaction()
+                session.persist(TrustedCertificateEntry(alias, newCertificate))
+                tx.commit()
+            }
+
+            val result = keyStore.engineIsCertificateEntry(alias)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given certificate does not exist for alias, when engineIsCertificateEntry, then returns false`() {
+            val result = keyStore.engineIsCertificateEntry(alias = "non-existent")
+
+            assertThat(result).isFalse()
         }
     }
 

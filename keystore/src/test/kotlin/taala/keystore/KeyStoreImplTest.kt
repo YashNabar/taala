@@ -13,6 +13,7 @@ import java.security.KeyStoreException
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import javax.sql.DataSource
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -103,9 +104,7 @@ class KeyStoreImplTest {
             val ex = assertThrows<KeyStoreException> {
                 keyStore.engineSetCertificateEntry(alias = null, newCertificate)
             }
-            assertSoftly { softly ->
-                softly.assertThat(ex).hasMessageContaining("Alias was null")
-            }
+            assertThat(ex).hasMessageContaining("Alias was null")
         }
 
         @Test
@@ -113,14 +112,12 @@ class KeyStoreImplTest {
             val ex = assertThrows<KeyStoreException> {
                 keyStore.engineSetCertificateEntry(KNOWN_ALIAS, cert = null)
             }
-            assertSoftly { softly ->
-                softly.assertThat(ex).hasMessageContaining("Certificate was null")
-            }
+            assertThat(ex).hasMessageContaining("Certificate was null")
         }
     }
 
     @Nested
-    inner class GetCertificateEntryTests {
+    inner class GetCertificateTests {
         @Test
         fun `given certificate exists, when engineGetCertificate, then returns certificate`() {
             every { session.get(TrustedCertificateEntry::class.java, any()) } returns TrustedCertificateEntry(
@@ -168,6 +165,48 @@ class KeyStoreImplTest {
             assertSoftly { softly ->
                 softly.assertThat(result).isNull()
             }
+        }
+    }
+
+    @Nested
+    inner class IsCertificateEntryTests {
+        @Test
+        fun `given certificate exists for alias, when engineIsCertificateEntry, then returns true`() {
+            every { session.get(TrustedCertificateEntry::class.java, any()) } returns TrustedCertificateEntry(
+                KNOWN_ALIAS, existingCertificate
+            )
+
+            val result = keyStore.engineIsCertificateEntry(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given certificate does not exist for alias, when engineIsCertificateEntry, then returns false`() {
+            every { session.get(TrustedCertificateEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineIsCertificateEntry(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given a different entry exists for alias, when engineIsCertificateEntry, then returns false`() {
+            every { session.get(TrustedCertificateEntry::class.java, any()) } returns null
+            every { session.get(PrivateKeyEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, mockk(relaxed = true), listOf(existingCertificate)
+            )
+
+            val result = keyStore.engineIsCertificateEntry(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given alias is null, when engineIsCertificateEntry, then returns false`() {
+            val result = keyStore.engineIsCertificateEntry(alias = null)
+
+            assertThat(result).isFalse()
         }
     }
 
