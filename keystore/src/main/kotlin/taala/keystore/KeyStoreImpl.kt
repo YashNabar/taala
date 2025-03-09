@@ -83,9 +83,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
                 throw KeyStoreException("Failed to save certificate entry. Cause: Alias '$alias' already exists.")
             } catch (e: Exception) {
                 transaction.rollback()
-                throw KeyStoreException(
-                    "An unexpected error occurred while attempting to save certificate entry. Check logs for more information."
-                )
+                throw KeyStoreException("Failed to save certificate entry due to an unexpected error. Check logs for more information.")
             }
         }
     }
