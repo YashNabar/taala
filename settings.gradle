@@ -5,4 +5,8 @@ pluginManagement {
 }
 
 rootProject.name = 'taala'
-include 'persistence'
+
+include(
+    ":keystore",
+    ":persistence"
+)
