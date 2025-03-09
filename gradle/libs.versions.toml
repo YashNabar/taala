@@ -41,6 +41,7 @@ test-containers = { module = "org.testcontainers:postgresql", version.ref = "tes
 
 # Test bundles
 test = ["assertj", "junit-api", "mockk"]
+integration-test = ["hikari", "test-containers"]
 
 # Build bundles
 

@@ -11,4 +11,9 @@ dependencies {
     testImplementation(libs.bundles.test)
 
     testRuntimeOnly(libs.junit.engine)
+
+    integrationTestImplementation(libs.bundles.integration.test)
+
+    integrationTestRuntimeOnly(libs.junit.engine)
+    integrationTestRuntimeOnly(libs.postgres.driver)
 }

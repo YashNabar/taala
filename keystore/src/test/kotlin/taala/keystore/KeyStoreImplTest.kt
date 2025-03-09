@@ -12,12 +12,12 @@ import java.io.ByteArrayInputStream
 import java.security.KeyStoreException
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
-import java.sql.SQLException
 import javax.sql.DataSource
 import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.Transaction
+import org.hibernate.exception.ConstraintViolationException
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -31,7 +31,7 @@ import taala.persistence.orm.HibernateHelper
 class KeyStoreImplTest {
 
     @Nested
-    inner class TrustedCertificateTests {
+    inner class SetCertificateEntryTests {
         @BeforeEach
         fun setUpMocks() {
             every { session.persist(any()) } just Runs
@@ -87,7 +87,7 @@ class KeyStoreImplTest {
         fun `given persistence fails, when engineSetCertificateEntry, then throws exception`() {
             val alias = "test"
             every { session.get(TrustedCertificateEntry::class.java, alias) } returns null
-            every { session.persist(any()) } throws SQLException()
+            every { session.persist(any()) } throws mockk<ConstraintViolationException>()
 
             val ex = assertThrows<KeyStoreException> {
                 keyStore.engineSetCertificateEntry(alias, newCertificate)
@@ -117,7 +117,10 @@ class KeyStoreImplTest {
                 softly.assertThat(ex).hasMessageContaining("Certificate was null")
             }
         }
+    }
 
+    @Nested
+    inner class GetCertificateEntryTests {
         @Test
         fun `given certificate exists, when engineGetCertificate, then returns certificate`() {
             every { session.get(TrustedCertificateEntry::class.java, any()) } returns TrustedCertificateEntry(

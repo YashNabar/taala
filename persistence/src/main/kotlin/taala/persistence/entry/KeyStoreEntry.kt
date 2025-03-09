@@ -14,15 +14,12 @@ class KeyStoreEntry(
     @Column(name = "alias")
     val alias: String,
 
-    @Lob
     @Column(name = "private_key", nullable = true)
     val privateKey: ByteArray?,
 
-    @Lob
     @Column(name = "certificate_chain", nullable = true)
     val chain: ByteArray?,
 
-    @Lob
     @Column(name = "secret_key", nullable = true)
     val secretKey: ByteArray?,
 

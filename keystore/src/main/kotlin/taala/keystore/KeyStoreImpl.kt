@@ -13,6 +13,7 @@ import java.sql.SQLException
 import java.util.Date
 import java.util.Enumeration
 import javax.sql.DataSource
+import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import taala.persistence.entry.PrivateKeyEntry
@@ -77,9 +78,14 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
                 }
                 transaction.commit()
                 logger.atInfo().log { "Saved certificate using alias '$alias'." }
-            } catch (e: SQLException) {
+            } catch (e: ConstraintViolationException) {
                 transaction.rollback()
-                throw KeyStoreException("Failed to save certificate entry. Cause: $e.")
+                throw KeyStoreException("Failed to save certificate entry. Cause: Alias '$alias' already exists.")
+            } catch (e: Exception) {
+                transaction.rollback()
+                throw KeyStoreException(
+                    "An unexpected error occurred while attempting to save certificate entry. Check logs for more information."
+                )
             }
         }
     }
