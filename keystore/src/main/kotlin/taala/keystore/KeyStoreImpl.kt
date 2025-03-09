@@ -9,7 +9,6 @@ import java.security.KeyStoreSpi
 import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
-import java.sql.SQLException
 import java.util.Date
 import java.util.Enumeration
 import javax.sql.DataSource
@@ -61,6 +60,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         throw UnsupportedOperationException()
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun engineSetCertificateEntry(alias: String?, cert: Certificate?) {
         requireNotNull(alias) { throw KeyStoreException("Alias was null. Certificate entry was not saved.") }
         requireNotNull(cert) { throw KeyStoreException("Certificate was null. Certificate entry was not saved.") }

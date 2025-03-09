@@ -3,6 +3,7 @@ package taala.keystore
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.io.ByteArrayInputStream
+import java.security.KeyPairGenerator
 import java.security.KeyStoreException
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
@@ -32,7 +34,6 @@ class KeyStoreImplIntegrationTest {
     inner class SetCertificateEntryTests {
         @Test
         fun `given certificate with new alias, when engineSetCertificateEntry, then assigns certificate to alias`() {
-            val newCertificate = readTestCertificate("test-certificate-1.pem")
             keyStore.engineSetCertificateEntry(alias, newCertificate)
 
             val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
@@ -53,10 +54,9 @@ class KeyStoreImplIntegrationTest {
                 session.persist(SecretKeyEntry(alias, someKey))
                 transaction.commit()
             }
-            val certificate = readTestCertificate("test-certificate-1.pem")
 
             val ex = assertThrows<KeyStoreException> {
-                keyStore.engineSetCertificateEntry(alias, certificate)
+                keyStore.engineSetCertificateEntry(alias, newCertificate)
             }
 
             assertThat(ex).hasMessageContaining("Failed to save certificate entry")
@@ -64,10 +64,8 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given certificate with alias exists, when engineSetCertificateEntry, then overwrites existing certificate`() {
-            val existingCertificate = readTestCertificate("test-certificate-1.pem")
             keyStore.engineSetCertificateEntry(alias, existingCertificate)
 
-            val newCertificate = readTestCertificate("test-certificate-2.pem")
             keyStore.engineSetCertificateEntry(alias, newCertificate)
 
             val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
@@ -76,19 +74,44 @@ class KeyStoreImplIntegrationTest {
                     .generateCertPath(ByteArrayInputStream(entity.chain))
                     .certificates.first()
             }
-
             assertThat(result).isEqualTo(newCertificate)
         }
     }
 
     @Nested
     inner class GetCertificateEntryTests {
+        @Test
+        fun `given certificate exists, when engineGetCertificate, then returns certificate`() {
+            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+                val tx = session.beginTransaction()
+                session.persist(TrustedCertificateEntry(alias, newCertificate))
+                tx.commit()
+            }
 
+            val result = keyStore.engineGetCertificate(alias)
+
+            assertThat(result).isEqualTo(newCertificate)
+        }
+
+        @Test
+        fun `given certificate chain exists for private key, when engineGetCertificate, then returns first certificate`() {
+            val keyPair = privateKeyFactory.genKeyPair()
+            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+                val tx = session.beginTransaction()
+                session.persist(PrivateKeyEntry(alias, privateKey = keyPair.private, chain = listOf(existingCertificate, newCertificate)))
+                tx.commit()
+            }
+
+            val result = keyStore.engineGetCertificate(alias)
+
+            assertThat(result).isEqualTo(existingCertificate)
+        }
     }
 
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"
+        const val PRIVATE_KEY_TYPE = "RSA"
 
         lateinit var dataSource: DataSource
         lateinit var keyStore: KeyStoreImpl
@@ -96,6 +119,9 @@ class KeyStoreImplIntegrationTest {
         val database = PostgreSQLContainer(DockerImageName.parse("postgres:17"))
         val certificateFactory: CertificateFactory = CertificateFactory.getInstance(CERTIFICATE_TYPE)
         val secretKeyFactory: KeyGenerator = KeyGenerator.getInstance(SECRET_KEY_TYPE).also { it.init(256) }
+        val privateKeyFactory: KeyPairGenerator = KeyPairGenerator.getInstance(PRIVATE_KEY_TYPE).also { it.initialize(2048) }
+        val existingCertificate = readTestCertificate("test-certificate-1.pem")
+        val newCertificate = readTestCertificate("test-certificate-2.pem")
 
         fun readTestCertificate(identifier: String): Certificate =
             certificateFactory.generateCertificate(
