@@ -15,6 +15,7 @@ import javax.sql.DataSource
 import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
@@ -37,9 +38,14 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         if (alias == null) return null
         return try {
             sessionFactory.openSession().use { session ->
-                val entry = session.get(TrustedCertificateEntry::class.java, alias) ?: session.get(PrivateKeyEntry::class.java, alias)
-                entry?.let {
-                    CertificateFactory.getInstance(it.certificateType).generateCertPath(ByteArrayInputStream(it.chain)).certificates.first()
+                when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
+                    is TrustedCertificateEntry, is PrivateKeyEntry -> {
+                        CertificateFactory.getInstance(entry.certificateType)
+                            .generateCertPath(ByteArrayInputStream(entry.chain))
+                            .certificates.first()
+                    }
+
+                    else -> null
                 }
             }
         } catch (e: CertificateException) {
