@@ -23,7 +23,6 @@ object HibernateHelper {
 
     private fun getDbProperties(datasource: DataSource) = mapOf(
         "hibernate.connection.datasource" to datasource,
-        "hibernate.dialect" to "org.hibernate.dialect.PostgreSQLDialect",
         "hibernate.hbm2ddl.auto" to "update"
     )
 }
