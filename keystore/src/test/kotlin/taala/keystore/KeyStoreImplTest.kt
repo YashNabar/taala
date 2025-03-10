@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
@@ -120,7 +121,7 @@ class KeyStoreImplTest {
     inner class GetCertificateTests {
         @Test
         fun `given certificate exists, when engineGetCertificate, then returns certificate`() {
-            every { session.get(TrustedCertificateEntry::class.java, any()) } returns TrustedCertificateEntry(
+            every { session.get(KeyStoreEntry::class.java, any()) } returns TrustedCertificateEntry(
                 KNOWN_ALIAS, existingCertificate
             )
 
@@ -133,8 +134,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given certificate chain exists for private key, when engineGetCertificate, then returns first certificate`() {
-            every { session.get(TrustedCertificateEntry::class.java, any()) } returns null
-            every { session.get(PrivateKeyEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.get(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
                 KNOWN_ALIAS, mockk(relaxed = true), listOf(existingCertificate)
             )
 
@@ -157,8 +157,7 @@ class KeyStoreImplTest {
         @Test
         fun `given alias does not exist, when engineGetCertificate, then returns null`() {
             val alias = "unknown"
-            every { session.get(TrustedCertificateEntry::class.java, any()) } returns null
-            every { session.get(PrivateKeyEntry::class.java, any()) } returns null
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
 
             val result = keyStore.engineGetCertificate(alias)
 
