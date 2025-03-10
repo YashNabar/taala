@@ -16,7 +16,7 @@ test-containers = "1.20.5"
 
 # Build dependency versions
 dokkaVersion = "2.0.0"
-detektVersion = "1.23.7"
+detektVersion = "1.23.8"
 
 [libraries]
 # Production libraries
