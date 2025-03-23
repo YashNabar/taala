@@ -174,6 +174,20 @@ class KeyStoreImplIntegrationTest {
         }
     }
 
+    @Nested
+    inner class GetKeyTests {
+        @Test
+        fun `given secret key exists, when engineGetKey, then returns secret key`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry(alias, newSecretKey))
+            }
+
+            val result = keyStore.engineGetKey(alias, null)
+
+            assertThat(result).isEqualTo(newSecretKey)
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"

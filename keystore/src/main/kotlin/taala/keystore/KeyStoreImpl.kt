@@ -12,6 +12,7 @@ import java.security.cert.CertificateFactory
 import java.util.Date
 import java.util.Enumeration
 import javax.crypto.SecretKey
+import javax.crypto.spec.SecretKeySpec
 import javax.sql.DataSource
 import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.Logger
@@ -29,8 +30,14 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         HibernateHelper.buildSessionFactory(dataSource)
     }
 
-    override fun engineGetKey(alias: String?, password: CharArray?): Key {
-        throw UnsupportedOperationException()
+    override fun engineGetKey(alias: String?, password: CharArray?): Key? {
+        if (alias == null) return null
+        return sessionFactory.openSession().use { session ->
+            when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
+                is SecretKeyEntry -> SecretKeySpec(entry.secretKey, entry.keyType)
+                else -> null
+            }
+        }
     }
 
     override fun engineGetCertificateChain(alias: String?): Array<Certificate> {

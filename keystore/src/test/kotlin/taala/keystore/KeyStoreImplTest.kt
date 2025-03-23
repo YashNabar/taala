@@ -294,6 +294,43 @@ class KeyStoreImplTest {
         }
     }
 
+    @Nested
+    inner class GetKeyTests {
+        @Test
+        fun `given secret key exists, when engineGetKey, then returns secret key`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
+
+            val result = keyStore.engineGetKey(KNOWN_ALIAS, null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isEqualTo(existingSecretKey)
+            }
+        }
+
+        @Test
+        fun `given alias is null, when engineGetKey, then returns null`() {
+            val result = keyStore.engineGetKey(alias = null, null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+        }
+
+        @Test
+        fun `given alias does not exist, when engineGetKey, then returns null`() {
+            val alias = "unknown"
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineGetKey(alias, null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"
