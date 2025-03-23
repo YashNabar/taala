@@ -9,6 +9,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.util.UUID
 import javax.crypto.KeyGenerator
+import javax.crypto.spec.SecretKeySpec
 import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -23,6 +24,7 @@ import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
+import taala.persistence.orm.HibernateHelper.withTransaction
 
 class KeyStoreImplIntegrationTest {
     @BeforeEach
@@ -131,6 +133,82 @@ class KeyStoreImplIntegrationTest {
         }
     }
 
+    @Nested
+    inner class SetKeyEntryTests {
+        @Test
+        fun `given secret key with new alias, when engineSetKeyEntry, then assigns secret key to alias`() {
+            keyStore.engineSetKeyEntry(alias, newSecretKey, null, null)
+
+            val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+                val entity = session.get(SecretKeyEntry::class.java, alias)
+                SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
+            }
+
+            assertThat(result).isEqualTo(newSecretKey)
+        }
+
+        @Test
+        fun `given alias assigned to different entity, when engineSetKeyEntry, then throws exception`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(TrustedCertificateEntry(alias, existingCertificate))
+            }
+
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetKeyEntry(alias, newSecretKey, null, null)
+            }
+
+            assertThat(ex).hasMessageContaining("Operation failed")
+        }
+
+        @Test
+        fun `given key with alias exists, when engineSetKeyEntry, then overwrites existing key`() {
+            keyStore.engineSetKeyEntry(alias, existingSecretKey, null, null)
+
+            keyStore.engineSetKeyEntry(alias, newSecretKey, null, null)
+
+            val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+                val entity = session.get(SecretKeyEntry::class.java, alias)
+                SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
+            }
+            assertThat(result).isEqualTo(newSecretKey)
+        }
+    }
+
+    @Nested
+    inner class GetKeyTests {
+        @Test
+        fun `given secret key exists, when engineGetKey, then returns secret key`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry(alias, newSecretKey))
+            }
+
+            val result = keyStore.engineGetKey(alias, null)
+
+            assertThat(result).isEqualTo(newSecretKey)
+        }
+    }
+
+    @Nested
+    inner class IsKeyEntryTests {
+        @Test
+        fun `given secret key exists for alias, when engineIsKeyEntry, then returns true`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry(alias, newSecretKey))
+            }
+
+            val result = keyStore.engineIsKeyEntry(alias)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given key does not exist for alias, when engineIsKeyEntry, then returns false`() {
+            val result = keyStore.engineIsKeyEntry(alias = "non-existent")
+
+            assertThat(result).isFalse()
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"
@@ -145,6 +223,8 @@ class KeyStoreImplIntegrationTest {
         val privateKeyFactory: KeyPairGenerator = KeyPairGenerator.getInstance(PRIVATE_KEY_TYPE).also { it.initialize(2048) }
         val existingCertificate = readTestCertificate("test-certificate-1.pem")
         val newCertificate = readTestCertificate("test-certificate-2.pem")
+        val newSecretKey = secretKeyFactory.generateKey()
+        val existingSecretKey = secretKeyFactory.generateKey()
 
         fun readTestCertificate(identifier: String): Certificate =
             certificateFactory.generateCertificate(

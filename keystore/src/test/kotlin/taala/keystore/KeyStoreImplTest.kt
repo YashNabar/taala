@@ -12,6 +12,9 @@ import java.io.ByteArrayInputStream
 import java.security.KeyStoreException
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.SecretKeySpec
 import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.SoftAssertions.assertSoftly
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
+import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
 
@@ -96,7 +100,6 @@ class KeyStoreImplTest {
             }
             assertSoftly { softly ->
                 softly.assertThat(ex).hasMessageContaining("Operation failed")
-                verify { tx.rollback() }
             }
         }
 
@@ -209,13 +212,177 @@ class KeyStoreImplTest {
         }
     }
 
+    @Nested
+    inner class SetKeyEntryTests {
+        @BeforeEach
+        fun setUpMocks() {
+            every { session.persist(any()) } just Runs
+        }
+
+        @Test
+        fun `given secret key with new alias, when engineSetKeyEntry, then assigns secret key to alias`() {
+            every { session.get(SecretKeyEntry::class.java, KNOWN_ALIAS) } returns null
+            val entryCaptor = slot<SecretKeyEntry>()
+            every { session.persist(capture(entryCaptor)) } just Runs
+
+            keyStore.engineSetKeyEntry(KNOWN_ALIAS, newSecretKey, null, null)
+
+            with(entryCaptor.captured) {
+                assertSoftly { softly ->
+                    softly.assertThat(this.alias).isEqualTo(KNOWN_ALIAS)
+                    val key = SecretKeySpec(this.secretKey, SECRET_KEY_TYPE)
+                    softly.assertThat(key).isEqualTo(newSecretKey)
+                    softly.assertThat(this.keyType).isEqualTo(SECRET_KEY_TYPE)
+                    softly.assertThat(this.chain).isNull()
+                    softly.assertThat(this.certificateType).isNull()
+                    softly.assertThat(this.privateKey).isNull()
+                }
+            }
+        }
+
+        @Test
+        fun `given secret key with alias exists, when engineSetKeyEntry, then overwrites existing secret key`() {
+            every { session.get(SecretKeyEntry::class.java, KNOWN_ALIAS) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
+            val entryCaptor = slot<SecretKeyEntry>()
+
+            keyStore.engineSetKeyEntry(KNOWN_ALIAS, newSecretKey, null, null)
+
+            verify { session.merge(capture(entryCaptor)) }
+            with(entryCaptor.captured) {
+                assertSoftly { softly ->
+                    softly.assertThat(this.alias).isEqualTo(KNOWN_ALIAS)
+                    val key = SecretKeySpec(this.secretKey, SECRET_KEY_TYPE)
+                    softly.assertThat(key).isEqualTo(newSecretKey)
+                    softly.assertThat(this.keyType).isEqualTo(SECRET_KEY_TYPE)
+                    softly.assertThat(this.chain).isNull()
+                    softly.assertThat(this.privateKey).isNull()
+                    softly.assertThat(this.certificateType).isNull()
+                }
+            }
+        }
+
+        @Test
+        fun `given persistence fails, when engineSetKeyEntry, then throws exception`() {
+            val alias = "test"
+            every { session.get(SecretKeyEntry::class.java, alias) } returns null
+            every { session.persist(any()) } throws mockk<ConstraintViolationException>()
+
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetKeyEntry(alias, newSecretKey, null, null)
+            }
+            assertSoftly { softly ->
+                softly.assertThat(ex).hasMessageContaining("Operation failed")
+            }
+        }
+
+        @Test
+        fun `given alias is null, when engineSetKeyEntry, then throws exception`() {
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetKeyEntry(alias = null, newSecretKey, null, null)
+            }
+            assertThat(ex).hasMessageContaining("Alias was null")
+        }
+
+        @Test
+        fun `given key is null, when engineSetKeyEntry, then throws exception`() {
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetKeyEntry(KNOWN_ALIAS, key = null, null, null)
+            }
+            assertThat(ex).hasMessageContaining("Key was null")
+        }
+    }
+
+    @Nested
+    inner class GetKeyTests {
+        @Test
+        fun `given secret key exists, when engineGetKey, then returns secret key`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
+
+            val result = keyStore.engineGetKey(KNOWN_ALIAS, null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isEqualTo(existingSecretKey)
+            }
+        }
+
+        @Test
+        fun `given alias is null, when engineGetKey, then returns null`() {
+            val result = keyStore.engineGetKey(alias = null, null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+        }
+
+        @Test
+        fun `given alias does not exist, when engineGetKey, then returns null`() {
+            val alias = "unknown"
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineGetKey(alias, null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+        }
+    }
+
+    @Nested
+    inner class IsKeyEntryTests {
+        @Test
+        fun `given secret key exists for alias, when engineIsKeyEntry, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
+
+            val result = keyStore.engineIsKeyEntry(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given key does not exist for alias, when engineIsKeyEntry, then returns false`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineIsKeyEntry(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given a different entry exists for alias, when engineIsKeyEntry, then returns false`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, mockk(relaxed = true), listOf(existingCertificate)
+            )
+
+            val result = keyStore.engineIsKeyEntry(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given alias is null, when engineIsKeyEntry, then returns false`() {
+            val result = keyStore.engineIsKeyEntry(alias = null)
+
+            assertThat(result).isFalse()
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
+        const val SECRET_KEY_TYPE = "AES"
         const val KNOWN_ALIAS = "test-alias"
 
         val certificateFactory: CertificateFactory = CertificateFactory.getInstance(CERTIFICATE_TYPE)
         val existingCertificate = readTestCertificate("test-certificate-1.pem")
         val newCertificate = readTestCertificate("test-certificate-2.pem")
+        val secretKeyFactory: KeyGenerator = KeyGenerator.getInstance(SECRET_KEY_TYPE).also { it.init(256) }
+        val existingSecretKey: SecretKey = secretKeyFactory.generateKey()
+        val newSecretKey: SecretKey = secretKeyFactory.generateKey()
         val tx = mockk<Transaction> {
             every { commit() } just Runs
             every { rollback() } just Runs

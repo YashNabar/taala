@@ -11,12 +11,15 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.util.Date
 import java.util.Enumeration
+import javax.crypto.SecretKey
+import javax.crypto.spec.SecretKeySpec
 import javax.sql.DataSource
 import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
+import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
 import taala.persistence.orm.HibernateHelper.withTransaction
@@ -27,8 +30,14 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         HibernateHelper.buildSessionFactory(dataSource)
     }
 
-    override fun engineGetKey(alias: String?, password: CharArray?): Key {
-        throw UnsupportedOperationException()
+    override fun engineGetKey(alias: String?, password: CharArray?): Key? {
+        if (alias == null) return null
+        return sessionFactory.openSession().use { session ->
+            when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
+                is SecretKeyEntry -> SecretKeySpec(entry.secretKey, entry.keyType)
+                else -> null
+            }
+        }
     }
 
     override fun engineGetCertificateChain(alias: String?): Array<Certificate> {
@@ -60,7 +69,32 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineSetKeyEntry(alias: String?, key: Key?, password: CharArray?, chain: Array<out Certificate>?) {
-        throw UnsupportedOperationException()
+        requireNotNull(alias) { throw KeyStoreException("Alias was null. Key entry was not saved.") }
+        requireNotNull(key) { throw KeyStoreException("Key was null. Key entry was not saved.") }
+        password?.let {
+            logger.atWarn().log {
+                "Password protection is not currently supported. Key entry with alias '$alias' will not be password-protected."
+            }
+        }
+
+        val entry = when (key) {
+            is SecretKey -> SecretKeyEntry(alias, key)
+            else -> throw UnsupportedOperationException()
+        }
+        sessionFactory.withTransaction { session ->
+            try {
+                if (session.get(SecretKeyEntry::class.java, alias) == null) {
+                    logger.atDebug().log { "Adding new key entry to key store under alias '$alias'." }
+                    session.persist(entry)
+                } else {
+                    logger.atDebug().log { "Overwriting existing key entry in key store under alias '$alias'." }
+                    session.merge(entry)
+                }
+                logger.atInfo().log { "Saved key using alias '$alias'." }
+            } catch (e: ConstraintViolationException) {
+                throw KeyStoreException("Failed to save certificate entry. Cause: Alias '$alias' already exists.")
+            }
+        }
     }
 
     override fun engineSetKeyEntry(alias: String?, key: ByteArray?, chain: Array<out Certificate>?) {
@@ -105,7 +139,14 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineIsKeyEntry(alias: String?): Boolean {
-        throw UnsupportedOperationException()
+        if (alias == null) return false
+        val entry = sessionFactory.openSession().use { session ->
+            session.get(KeyStoreEntry::class.java, alias)
+        }
+        return when (entry) {
+            is SecretKeyEntry -> true
+            else -> false
+        }
     }
 
     override fun engineIsCertificateEntry(alias: String?): Boolean {
