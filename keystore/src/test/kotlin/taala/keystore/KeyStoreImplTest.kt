@@ -95,7 +95,7 @@ class KeyStoreImplTest {
                 keyStore.engineSetCertificateEntry(alias, newCertificate)
             }
             assertSoftly { softly ->
-                softly.assertThat(ex).hasMessageContaining("Failed to save certificate entry")
+                softly.assertThat(ex).hasMessageContaining("Operation failed")
                 verify { tx.rollback() }
             }
         }
@@ -219,11 +219,13 @@ class KeyStoreImplTest {
         val tx = mockk<Transaction> {
             every { commit() } just Runs
             every { rollback() } just Runs
+            every { isActive } returns true
         }
         val session = mockk<Session> {
             every { beginTransaction() } returns tx
             every { merge<TrustedCertificateEntry>(any()) } returns mockk()
             every { close() } just Runs
+            every { isOpen } returns true
         }
         val sessionFactory = mockk<SessionFactory> {
             every { openSession() } returns session

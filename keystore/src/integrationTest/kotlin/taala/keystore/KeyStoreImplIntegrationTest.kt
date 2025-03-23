@@ -59,7 +59,7 @@ class KeyStoreImplIntegrationTest {
                 keyStore.engineSetCertificateEntry(alias, newCertificate)
             }
 
-            assertThat(ex).hasMessageContaining("Failed to save certificate entry")
+            assertThat(ex).hasMessageContaining("Operation failed")
         }
 
         @Test

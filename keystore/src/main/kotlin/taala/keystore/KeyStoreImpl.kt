@@ -19,6 +19,7 @@ import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
+import taala.persistence.orm.HibernateHelper.withTransaction
 
 @Suppress("TooManyFunctions")
 class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
@@ -66,14 +67,12 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         throw UnsupportedOperationException()
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override fun engineSetCertificateEntry(alias: String?, cert: Certificate?) {
         requireNotNull(alias) { throw KeyStoreException("Alias was null. Certificate entry was not saved.") }
         requireNotNull(cert) { throw KeyStoreException("Certificate was null. Certificate entry was not saved.") }
 
         val entry = TrustedCertificateEntry(alias, cert)
-        sessionFactory.openSession().use { session ->
-            val transaction = session.beginTransaction()
+        sessionFactory.withTransaction { session ->
             try {
                 if (session.get(TrustedCertificateEntry::class.java, alias) == null) {
                     logger.atDebug().log { "Adding new certificate entry to key store under alias '$alias'." }
@@ -82,14 +81,9 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
                     logger.atDebug().log { "Overwriting existing certificate entry in key store under alias '$alias'." }
                     session.merge(entry)
                 }
-                transaction.commit()
                 logger.atInfo().log { "Saved certificate using alias '$alias'." }
             } catch (e: ConstraintViolationException) {
-                transaction.rollback()
                 throw KeyStoreException("Failed to save certificate entry. Cause: Alias '$alias' already exists.")
-            } catch (e: Exception) {
-                transaction.rollback()
-                throw KeyStoreException("Failed to save certificate entry due to an unexpected error. Check logs for more information.")
             }
         }
     }
