@@ -331,6 +331,47 @@ class KeyStoreImplTest {
         }
     }
 
+    @Nested
+    inner class IsKeyEntryTests {
+        @Test
+        fun `given secret key exists for alias, when engineIsKeyEntry, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
+
+            val result = keyStore.engineIsKeyEntry(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given key does not exist for alias, when engineIsKeyEntry, then returns false`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineIsKeyEntry(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given a different entry exists for alias, when engineIsKeyEntry, then returns false`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, mockk(relaxed = true), listOf(existingCertificate)
+            )
+
+            val result = keyStore.engineIsKeyEntry(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given alias is null, when engineIsKeyEntry, then returns false`() {
+            val result = keyStore.engineIsKeyEntry(alias = null)
+
+            assertThat(result).isFalse()
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"

@@ -188,6 +188,27 @@ class KeyStoreImplIntegrationTest {
         }
     }
 
+    @Nested
+    inner class IsKeyEntryTests {
+        @Test
+        fun `given secret key exists for alias, when engineIsKeyEntry, then returns true`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry(alias, newSecretKey))
+            }
+
+            val result = keyStore.engineIsKeyEntry(alias)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given key does not exist for alias, when engineIsKeyEntry, then returns false`() {
+            val result = keyStore.engineIsKeyEntry(alias = "non-existent")
+
+            assertThat(result).isFalse()
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"
