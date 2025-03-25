@@ -21,7 +21,6 @@ import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.Transaction
-import org.hibernate.exception.ConstraintViolationException
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -45,7 +44,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given certificate with new alias, when engineSetCertificateEntry, then assigns certificate to alias`() {
-            every { session.get(TrustedCertificateEntry::class.java, KNOWN_ALIAS) } returns null
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns null
             val entryCaptor = slot<TrustedCertificateEntry>()
             every { session.persist(capture(entryCaptor)) } just Runs
 
@@ -67,7 +66,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given certificate with alias exists, when engineSetCertificateEntry, then overwrites existing certificate`() {
-            every { session.get(TrustedCertificateEntry::class.java, KNOWN_ALIAS) } returns TrustedCertificateEntry(
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns TrustedCertificateEntry(
                 KNOWN_ALIAS, existingCertificate
             )
             val entryCaptor = slot<TrustedCertificateEntry>()
@@ -90,16 +89,16 @@ class KeyStoreImplTest {
         }
 
         @Test
-        fun `given persistence fails, when engineSetCertificateEntry, then throws exception`() {
-            val alias = "test"
-            every { session.get(TrustedCertificateEntry::class.java, alias) } returns null
-            every { session.persist(any()) } throws mockk<ConstraintViolationException>()
+        fun `given key with alias exists, when engineSetCertificateEntry, then throws exception`() {
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
 
             val ex = assertThrows<KeyStoreException> {
-                keyStore.engineSetCertificateEntry(alias, newCertificate)
+                keyStore.engineSetCertificateEntry(KNOWN_ALIAS, newCertificate)
             }
             assertSoftly { softly ->
-                softly.assertThat(ex).hasMessageContaining("Operation failed")
+                softly.assertThat(ex).hasMessageContaining("Failed to save certificate entry")
             }
         }
 
@@ -221,7 +220,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given secret key with new alias, when engineSetKeyEntry, then assigns secret key to alias`() {
-            every { session.get(SecretKeyEntry::class.java, KNOWN_ALIAS) } returns null
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns null
             val entryCaptor = slot<SecretKeyEntry>()
             every { session.persist(capture(entryCaptor)) } just Runs
 
@@ -242,7 +241,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given secret key with alias exists, when engineSetKeyEntry, then overwrites existing secret key`() {
-            every { session.get(SecretKeyEntry::class.java, KNOWN_ALIAS) } returns SecretKeyEntry(
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns SecretKeyEntry(
                 KNOWN_ALIAS, existingSecretKey
             )
             val entryCaptor = slot<SecretKeyEntry>()
@@ -264,16 +263,16 @@ class KeyStoreImplTest {
         }
 
         @Test
-        fun `given persistence fails, when engineSetKeyEntry, then throws exception`() {
-            val alias = "test"
-            every { session.get(SecretKeyEntry::class.java, alias) } returns null
-            every { session.persist(any()) } throws mockk<ConstraintViolationException>()
+        fun `given certificate with alias exists, when engineSetKeyEntry, then throws exception`() {
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns TrustedCertificateEntry(
+                KNOWN_ALIAS, existingCertificate
+            )
 
             val ex = assertThrows<KeyStoreException> {
-                keyStore.engineSetKeyEntry(alias, newSecretKey, null, null)
+                keyStore.engineSetKeyEntry(KNOWN_ALIAS, newSecretKey, null, null)
             }
             assertSoftly { softly ->
-                softly.assertThat(ex).hasMessageContaining("Operation failed")
+                softly.assertThat(ex).hasMessageContaining("Failed to save key entry")
             }
         }
 

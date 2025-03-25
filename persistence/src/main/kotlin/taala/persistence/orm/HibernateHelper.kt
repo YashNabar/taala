@@ -41,6 +41,13 @@ object HibernateHelper {
             val result = block(session)
             transaction.commit()
             result
+        } catch (e: KeyStoreException) {
+            logger.atError().log { "Operation failed. Cause: $e" }
+            if (transaction.isActive) {
+                logger.atTrace().log { "Rolling back transaction." }
+                transaction.rollback()
+            }
+            throw e
         } catch (e: Throwable) {
             logger.atError().log { "Operation failed due to an unexpected error. Cause: $e" }
             if (transaction.isActive) {
