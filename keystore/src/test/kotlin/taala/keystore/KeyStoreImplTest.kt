@@ -9,9 +9,13 @@ import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import java.io.ByteArrayInputStream
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.KeyStoreException
+import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
+import java.security.spec.PKCS8EncodedKeySpec
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
@@ -240,14 +244,37 @@ class KeyStoreImplTest {
         }
 
         @Test
-        fun `given secret key with alias exists, when engineSetKeyEntry, then overwrites existing secret key`() {
-            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns SecretKeyEntry(
-                KNOWN_ALIAS, existingSecretKey
-            )
+        fun `given private key with new alias, when engineSetKeyEntry, then assigns private key to alias`() {
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns null
+            val entryCaptor = slot<PrivateKeyEntry>()
+            every { session.persist(capture(entryCaptor)) } just Runs
+            val certChain = listOf(existingCertificate, newCertificate)
+
+            keyStore.engineSetKeyEntry(KNOWN_ALIAS, newPrivateKey, null, certChain.toTypedArray())
+
+            with(entryCaptor.captured) {
+                assertSoftly { softly ->
+                    softly.assertThat(this.alias).isEqualTo(KNOWN_ALIAS)
+                    val capturedKey = KeyFactory.getInstance(PRIVATE_KEY_TYPE).generatePrivate(PKCS8EncodedKeySpec(this.privateKey))
+                    softly.assertThat(capturedKey).isEqualTo(newPrivateKey)
+                    softly.assertThat(this.keyType).isEqualTo(PRIVATE_KEY_TYPE)
+                    val capturedChain = certificateFactory.generateCertPath(ByteArrayInputStream(this.chain)).certificates
+                    softly.assertThat(capturedChain).isEqualTo(certChain)
+                    softly.assertThat(this.certificateType).isEqualTo(existingCertificate.type)
+                    softly.assertThat(this.secretKey).isNull()
+                }
+            }
+        }
+
+        @Test
+        fun `given secret key but private key with alias exists, when engineSetKeyEntry, then overwrites existing private key`() {
+            val existingEntry = PrivateKeyEntry(KNOWN_ALIAS, newPrivateKey, listOf(newCertificate))
+            every { session.get(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns existingEntry
             val entryCaptor = slot<SecretKeyEntry>()
 
             keyStore.engineSetKeyEntry(KNOWN_ALIAS, newSecretKey, null, null)
 
+            verify { session.remove(existingEntry) }
             verify { session.merge(capture(entryCaptor)) }
             with(entryCaptor.captured) {
                 assertSoftly { softly ->
@@ -290,6 +317,14 @@ class KeyStoreImplTest {
                 keyStore.engineSetKeyEntry(KNOWN_ALIAS, key = null, null, null)
             }
             assertThat(ex).hasMessageContaining("Key was null")
+        }
+
+        @Test
+        fun `given private key and chain is null, when engineSetKeyEntry, then throws exception`() {
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineSetKeyEntry(KNOWN_ALIAS, newPrivateKey, null, chain = null)
+            }
+            assertThat(ex).hasMessageContaining("Certificate chain was null")
         }
     }
 
@@ -374,6 +409,7 @@ class KeyStoreImplTest {
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"
+        const val PRIVATE_KEY_TYPE = "RSA"
         const val KNOWN_ALIAS = "test-alias"
 
         val certificateFactory: CertificateFactory = CertificateFactory.getInstance(CERTIFICATE_TYPE)
@@ -382,6 +418,8 @@ class KeyStoreImplTest {
         val secretKeyFactory: KeyGenerator = KeyGenerator.getInstance(SECRET_KEY_TYPE).also { it.init(256) }
         val existingSecretKey: SecretKey = secretKeyFactory.generateKey()
         val newSecretKey: SecretKey = secretKeyFactory.generateKey()
+        val privateKeyFactory: KeyPairGenerator = KeyPairGenerator.getInstance(PRIVATE_KEY_TYPE).also { it.initialize(2048) }
+        val newPrivateKey: PrivateKey = privateKeyFactory.genKeyPair().private
         val tx = mockk<Transaction> {
             every { commit() } just Runs
             every { rollback() } just Runs
@@ -389,7 +427,8 @@ class KeyStoreImplTest {
         }
         val session = mockk<Session> {
             every { beginTransaction() } returns tx
-            every { merge<TrustedCertificateEntry>(any()) } returns mockk()
+            every { merge<KeyStoreEntry>(any()) } returns mockk()
+            every { remove(any()) } just Runs
             every { close() } just Runs
             every { isOpen } returns true
         }

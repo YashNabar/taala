@@ -6,6 +6,7 @@ import java.io.OutputStream
 import java.security.Key
 import java.security.KeyStoreException
 import java.security.KeyStoreSpi
+import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
@@ -78,12 +79,17 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
 
         val newEntry = when (key) {
             is SecretKey -> SecretKeyEntry(alias, key)
+            is PrivateKey -> {
+                requireNotNull(chain) { throw KeyStoreException("Certificate chain was null. Private key entry was not saved.") }
+                PrivateKeyEntry(alias, key, chain.toList())
+            }
             else -> throw UnsupportedOperationException()
         }
         sessionFactory.withTransaction { session ->
-            when (session.get(KeyStoreEntry::class.java, alias)) {
+            when (val existingEntry = session.get(KeyStoreEntry::class.java, alias)) {
                 is SecretKeyEntry, is PrivateKeyEntry -> {
                     logger.atDebug().log { "Overwriting existing key entry in key store under alias '$alias'." }
+                    session.remove(existingEntry)
                     session.merge(newEntry)
                 }
 

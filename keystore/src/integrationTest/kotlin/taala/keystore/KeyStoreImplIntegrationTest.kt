@@ -3,12 +3,16 @@ package taala.keystore
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.io.ByteArrayInputStream
+import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStoreException
+import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
+import java.security.spec.PKCS8EncodedKeySpec
 import java.util.UUID
 import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 import javax.sql.DataSource
 import org.assertj.core.api.Assertions.assertThat
@@ -148,6 +152,21 @@ class KeyStoreImplIntegrationTest {
         }
 
         @Test
+        fun `given private key with new alias, when engineSetKeyEntry, then assigns private key to alias`() {
+            keyStore.engineSetKeyEntry(alias, newPrivateKey, null, listOf(newCertificate).toTypedArray())
+
+            val (key, chain) = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+                val entity = session.get(PrivateKeyEntry::class.java, alias)
+                val key = KeyFactory.getInstance(PRIVATE_KEY_TYPE).generatePrivate(PKCS8EncodedKeySpec(entity.privateKey))
+                val chain = certificateFactory.generateCertPath(ByteArrayInputStream(entity.chain)).certificates
+                key to chain
+            }
+
+            assertThat(key).isEqualTo(newPrivateKey)
+            assertThat(chain).isEqualTo(listOf(newCertificate))
+        }
+
+        @Test
         fun `given alias assigned to different entity, when engineSetKeyEntry, then throws exception`() {
             HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
                 session.persist(TrustedCertificateEntry(alias, existingCertificate))
@@ -162,7 +181,7 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given key with alias exists, when engineSetKeyEntry, then overwrites existing key`() {
-            keyStore.engineSetKeyEntry(alias, existingSecretKey, null, null)
+            keyStore.engineSetKeyEntry(alias, newPrivateKey, null, listOf(newCertificate).toTypedArray())
 
             keyStore.engineSetKeyEntry(alias, newSecretKey, null, null)
 
@@ -223,8 +242,9 @@ class KeyStoreImplIntegrationTest {
         val privateKeyFactory: KeyPairGenerator = KeyPairGenerator.getInstance(PRIVATE_KEY_TYPE).also { it.initialize(2048) }
         val existingCertificate = readTestCertificate("test-certificate-1.pem")
         val newCertificate = readTestCertificate("test-certificate-2.pem")
-        val newSecretKey = secretKeyFactory.generateKey()
-        val existingSecretKey = secretKeyFactory.generateKey()
+        val newSecretKey: SecretKey = secretKeyFactory.generateKey()
+        val existingSecretKey: SecretKey = secretKeyFactory.generateKey()
+        val newPrivateKey: PrivateKey = privateKeyFactory.genKeyPair().private
 
         fun readTestCertificate(identifier: String): Certificate =
             certificateFactory.generateCertificate(
