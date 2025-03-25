@@ -14,7 +14,6 @@ import java.util.Enumeration
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 import javax.sql.DataSource
-import org.hibernate.exception.ConstraintViolationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import taala.persistence.entry.KeyStoreEntry
@@ -77,22 +76,25 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
             }
         }
 
-        val entry = when (key) {
+        val newEntry = when (key) {
             is SecretKey -> SecretKeyEntry(alias, key)
             else -> throw UnsupportedOperationException()
         }
         sessionFactory.withTransaction { session ->
-            try {
-                if (session.get(SecretKeyEntry::class.java, alias) == null) {
-                    logger.atDebug().log { "Adding new key entry to key store under alias '$alias'." }
-                    session.persist(entry)
-                } else {
+            when (session.get(KeyStoreEntry::class.java, alias)) {
+                is SecretKeyEntry, is PrivateKeyEntry -> {
                     logger.atDebug().log { "Overwriting existing key entry in key store under alias '$alias'." }
-                    session.merge(entry)
+                    session.merge(newEntry)
                 }
-                logger.atInfo().log { "Saved key using alias '$alias'." }
-            } catch (e: ConstraintViolationException) {
-                throw KeyStoreException("Failed to save certificate entry. Cause: Alias '$alias' already exists.")
+
+                null -> {
+                    logger.atDebug().log { "Adding new key entry to key store under alias '$alias'." }
+                    session.persist(newEntry)
+                }
+
+                else -> {
+                    throw KeyStoreException("Failed to save key entry. Cause: Alias '$alias' already exists.")
+                }
             }
         }
     }
@@ -105,19 +107,22 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         requireNotNull(alias) { throw KeyStoreException("Alias was null. Certificate entry was not saved.") }
         requireNotNull(cert) { throw KeyStoreException("Certificate was null. Certificate entry was not saved.") }
 
-        val entry = TrustedCertificateEntry(alias, cert)
+        val newEntry = TrustedCertificateEntry(alias, cert)
         sessionFactory.withTransaction { session ->
-            try {
-                if (session.get(TrustedCertificateEntry::class.java, alias) == null) {
-                    logger.atDebug().log { "Adding new certificate entry to key store under alias '$alias'." }
-                    session.persist(entry)
-                } else {
+            when (session.get(KeyStoreEntry::class.java, alias)) {
+                is TrustedCertificateEntry -> {
                     logger.atDebug().log { "Overwriting existing certificate entry in key store under alias '$alias'." }
-                    session.merge(entry)
+                    session.merge(newEntry)
                 }
-                logger.atInfo().log { "Saved certificate using alias '$alias'." }
-            } catch (e: ConstraintViolationException) {
-                throw KeyStoreException("Failed to save certificate entry. Cause: Alias '$alias' already exists.")
+
+                null -> {
+                    logger.atDebug().log { "Adding new certificate entry to key store under alias '$alias'." }
+                    session.persist(newEntry)
+                }
+
+                else -> {
+                    throw KeyStoreException("Failed to save certificate entry. Cause: Alias '$alias' already exists.")
+                }
             }
         }
     }
