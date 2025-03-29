@@ -4,12 +4,16 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.Key
+import java.security.KeyFactory
 import java.security.KeyStoreException
 import java.security.KeyStoreSpi
 import java.security.PrivateKey
+import java.security.UnrecoverableKeyException
 import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
+import java.security.spec.InvalidKeySpecException
+import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
 import java.util.Enumeration
 import javax.crypto.SecretKey
@@ -35,6 +39,13 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         return sessionFactory.openSession().use { session ->
             when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
                 is SecretKeyEntry -> SecretKeySpec(entry.secretKey, entry.keyType)
+                is PrivateKeyEntry -> try {
+                    KeyFactory.getInstance(entry.keyType).generatePrivate(PKCS8EncodedKeySpec(entry.privateKey))
+                } catch (e: InvalidKeySpecException) {
+                    logger.atError().log { "Failed to retrieve key with alias '$alias'. Cause: ${e.message}" }
+                    throw UnrecoverableKeyException("Failed to retrieve key with alias '$alias'.")
+                }
+
                 else -> null
             }
         }
@@ -155,7 +166,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
             session.get(KeyStoreEntry::class.java, alias)
         }
         return when (entry) {
-            is SecretKeyEntry -> true
+            is SecretKeyEntry, is PrivateKeyEntry -> true
             else -> false
         }
     }

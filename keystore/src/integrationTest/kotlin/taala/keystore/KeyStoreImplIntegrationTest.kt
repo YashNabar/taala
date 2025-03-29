@@ -205,6 +205,17 @@ class KeyStoreImplIntegrationTest {
 
             assertThat(result).isEqualTo(newSecretKey)
         }
+
+        @Test
+        fun `given private key exists, when engineGetKey, then returns private key`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(PrivateKeyEntry(alias, newPrivateKey, listOf(existingCertificate)))
+            }
+
+            val result = keyStore.engineGetKey(alias, null)
+
+            assertThat(result).isEqualTo(newPrivateKey)
+        }
     }
 
     @Nested
@@ -213,6 +224,17 @@ class KeyStoreImplIntegrationTest {
         fun `given secret key exists for alias, when engineIsKeyEntry, then returns true`() {
             HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
                 session.persist(SecretKeyEntry(alias, newSecretKey))
+            }
+
+            val result = keyStore.engineIsKeyEntry(alias)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given private key exists for alias, when engineIsKeyEntry, then returns true`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(PrivateKeyEntry(alias, newPrivateKey, listOf(existingCertificate)))
             }
 
             val result = keyStore.engineIsKeyEntry(alias)
