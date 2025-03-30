@@ -1,5 +1,7 @@
 description 'Keystore persistence'
 
+version = rootProject.version
+
 dependencies {
     implementation(libs.jakarta)
     implementation(libs.hibernate)
