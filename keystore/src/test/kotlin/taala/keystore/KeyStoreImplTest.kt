@@ -200,6 +200,64 @@ class KeyStoreImplTest {
     }
 
     @Nested
+    inner class GetCertificateChainTests {
+        @Test
+        fun `given certificate chain exists for private key, when engineGetCertificateChain, then returns certificate chain`() {
+            val chain = listOf(existingCertificate, newCertificate)
+            every { session.get(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, newPrivateKey, chain
+            )
+
+            val result = keyStore.engineGetCertificateChain(KNOWN_ALIAS)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isEqualTo(chain.toTypedArray())
+            }
+        }
+
+        @Test
+        fun `given unrecoverable certificate, when engineGetCertificateChain, then returns null`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
+            )
+            mockkStatic(CertificateFactory::class)
+
+            val factory = mockk<CertificateFactory>()
+            every { CertificateFactory.getInstance(CERTIFICATE_TYPE) } returns factory
+            every { factory.generateCertPath(any<InputStream>()) } throws CertificateException()
+
+            val result = keyStore.engineGetCertificateChain(KNOWN_ALIAS)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+
+            unmockkStatic(CertificateFactory::class)
+        }
+
+        @Test
+        fun `given alias is null, when engineGetCertificateChain, then returns null`() {
+            val result = keyStore.engineGetCertificateChain(alias = null)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+        }
+
+        @Test
+        fun `given alias does not exist, when engineGetCertificateChain, then returns null`() {
+            val alias = "unknown"
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineGetCertificateChain(alias)
+
+            assertSoftly { softly ->
+                softly.assertThat(result).isNull()
+            }
+        }
+    }
+
+    @Nested
     inner class IsCertificateEntryTests {
         @Test
         fun `given certificate exists for alias, when engineIsCertificateEntry, then returns true`() {

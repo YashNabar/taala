@@ -51,8 +51,24 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         }
     }
 
-    override fun engineGetCertificateChain(alias: String?): Array<Certificate> {
-        throw UnsupportedOperationException()
+    override fun engineGetCertificateChain(alias: String?): Array<Certificate>? {
+        if (alias == null) return null
+        return try {
+            sessionFactory.openSession().use { session ->
+                when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
+                    is PrivateKeyEntry -> {
+                        CertificateFactory.getInstance(entry.certificateType)
+                            .generateCertPath(ByteArrayInputStream(entry.chain))
+                            .certificates.toTypedArray()
+                    }
+
+                    else -> null
+                }
+            }
+        } catch (e: CertificateException) {
+            logger.atError().log { "Failed to retrieve certificate chain with alias '$alias'. Cause: ${e.message}" }
+            null
+        }
     }
 
     override fun engineGetCertificate(alias: String?): Certificate? {

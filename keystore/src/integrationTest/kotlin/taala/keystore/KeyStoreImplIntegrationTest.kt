@@ -115,6 +115,24 @@ class KeyStoreImplIntegrationTest {
     }
 
     @Nested
+    inner class GetCertificateChainTests {
+        @Test
+        fun `given certificate chain exists for private key, when engineGetCertificateChain, then returns certificate chain`() {
+            val keyPair = privateKeyFactory.genKeyPair()
+            val chain = listOf(existingCertificate, newCertificate)
+            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+                val tx = session.beginTransaction()
+                session.persist(PrivateKeyEntry(alias, privateKey = keyPair.private, chain = chain))
+                tx.commit()
+            }
+
+            val result = keyStore.engineGetCertificateChain(alias)
+
+            assertThat(result).isEqualTo(chain.toTypedArray())
+        }
+    }
+
+    @Nested
     inner class IsCertificateEntryTests {
         @Test
         fun `given certificate exists for alias, when engineIsCertificateEntry, then returns true`() {
