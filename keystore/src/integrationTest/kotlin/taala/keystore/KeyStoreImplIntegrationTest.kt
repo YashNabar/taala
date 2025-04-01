@@ -101,10 +101,9 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given certificate chain exists for private key, when engineGetCertificate, then returns first certificate`() {
-            val keyPair = privateKeyFactory.genKeyPair()
             HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
                 val tx = session.beginTransaction()
-                session.persist(PrivateKeyEntry(alias, privateKey = keyPair.private, chain = listOf(testCertificateA, testCertificateB)))
+                session.persist(PrivateKeyEntry(alias, privateKey = testPrivateKey, chain = listOf(testCertificateA, testCertificateB)))
                 tx.commit()
             }
 
@@ -118,11 +117,10 @@ class KeyStoreImplIntegrationTest {
     inner class GetCertificateChainTests {
         @Test
         fun `given certificate chain exists for private key, when engineGetCertificateChain, then returns certificate chain`() {
-            val keyPair = privateKeyFactory.genKeyPair()
             val chain = listOf(testCertificateA, testCertificateB)
             HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
                 val tx = session.beginTransaction()
-                session.persist(PrivateKeyEntry(alias, privateKey = keyPair.private, chain = chain))
+                session.persist(PrivateKeyEntry(alias, privateKey = testPrivateKey, chain = chain))
                 tx.commit()
             }
 
