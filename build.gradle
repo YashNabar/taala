@@ -120,8 +120,6 @@ subprojects {
     apply plugin: 'kotlin-jpa'
     apply plugin: 'io.gitlab.arturbosch.detekt'
 
-    version rootProject.version
-
     idea{
         module {
             downloadJavadoc = true
