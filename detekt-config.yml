@@ -12,7 +12,7 @@ complexity:
     active: true
     excludes: "**/buildSrc/**"
     threshold: 4
-  ComplexMethod:
+  CyclomaticComplexMethod:
     active: true
     excludes: "**/buildSrc/**"
     threshold: 10
@@ -125,7 +125,6 @@ naming:
     functionPattern: '^([a-z$][a-zA-Z$0-9]*)|(`.*`)$'
     excludeClassPattern: '$^'
     excludes: "**/buildSrc/**"
-    ignoreOverridden: true
   MatchingDeclarationName:
     active: true
     excludes: "**/buildSrc/**"
@@ -151,7 +150,6 @@ naming:
     variablePattern: '[a-z][A-Za-z0-9]*'
     privateVariablePattern: '(_)?[A-Za-z][_A-Za-z0-9]*'
     excludeClassPattern: '$^'
-    ignoreOverridden: true
 
 performance:
   active: true
@@ -167,9 +165,6 @@ performance:
 
 potential-bugs:
   active: true
-  DuplicateCaseInWhenExpression:
-    active: true
-    excludes: "**/buildSrc/**"
   EqualsWithHashCodeExist:
     active: true
     excludes: "**/buildSrc/**"
@@ -185,11 +180,11 @@ style:
   ForbiddenComment:
     active: true
     excludes: "**/buildSrc/**"
-    values: 'TODO:,FIXME:,STOPSHIP:'
+    comments: ["TODO","FIXME","STOPSHIP"]
   MagicNumber:
     active: false
     excludes: "**/test/**,**/integration-test/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
-    ignoreNumbers: '-1,0,1,2'
+    ignoreNumbers: [-1,0,1,2]
     ignoreHashCodeFunction: true
     ignorePropertyDeclaration: false
     ignoreConstantDeclaration: true
@@ -219,6 +214,6 @@ style:
   WildcardImport:
     active: true
     excludes: "**/buildSrc/**"
-    excludeImports: 'java.util.*,kotlinx.android.synthetic.*'
+    excludeImports: [java.util.*,kotlinx.android.synthetic.*]
   UnusedImports:
     active: true

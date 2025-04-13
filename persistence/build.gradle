@@ -1,4 +1,4 @@
-description 'Keystore persistence'
+description = 'Keystore persistence'
 
 version = rootProject.version
 
