@@ -5,8 +5,10 @@ import com.zaxxer.hikari.HikariDataSource
 import java.io.ByteArrayInputStream
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
+import java.security.KeyStore
 import java.security.KeyStoreException
 import java.security.PrivateKey
+import java.security.Security
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.spec.PKCS8EncodedKeySpec
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import taala.keystore.provider.Taala
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
@@ -34,6 +37,19 @@ class KeyStoreImplIntegrationTest {
     @BeforeEach
     fun setUp() {
         alias = UUID.randomUUID().toString()
+    }
+
+    @Test
+    fun `given provider, when register provider and load keystore, then initializes keystore for use`() {
+        val provider = Taala(dataSource)
+        Security.addProvider(provider)
+
+        val ks = KeyStore.getInstance("TaalaKeyStore", "Taala")
+        ks.load(null, null)
+
+        ks.setCertificateEntry(alias, testCertificateB)
+        val result = ks.getCertificate(alias)
+        assertThat(result).isEqualTo(testCertificateB)
     }
 
     @Nested
