@@ -2,8 +2,8 @@
 
 [![Gradle Build](https://github.com/YashNabar/database-keystore/actions/workflows/gradle.yml/badge.svg?branch=master)](https://github.com/YashNabar/database-keystore/actions/workflows/gradle.yml)
 
-Taala is a database-backed implementation of the Java Cryptographic Architecture (JCA) KeyStore.
-It provides a custom implementation of `KeyStoreSpi`, allowing Java applications to store cryptographic keys and certificates in a relational database, rather than using traditional file-based formats such as JKS or PKCS12.
+Taala is a database-backed implementation provider of the Java Cryptographic Architecture (JCA) KeyStore.
+It provides a custom implementation of `KeyStoreSpi`, enabling Java applications to persist cryptographic material — such as private keys, secret keys, and certificates — to a relational database, as opposed to traditional file-based formats like JKS or PKCS12.
 
 Applications can interact with the Taala key store seamlessly through Java’s standard KeyStore interface.
 
