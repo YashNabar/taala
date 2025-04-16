@@ -8,7 +8,8 @@ repositories {
 }
 
 dependencies {
-    implementation("taala.keystore:taala:1.0.0-SNAPSHOT")
+    // Dependency on published artifact
+    testImplementation("taala.keystore:taala:$version")
     testImplementation(libs.bundles.integration.test)
     testImplementation(libs.bundles.test)
 
