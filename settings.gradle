@@ -8,5 +8,6 @@ rootProject.name = 'taala'
 
 include(
     ":keystore",
-    ":persistence"
+    ":persistence",
+    ":testing"
 )
