@@ -10,8 +10,6 @@ plugins {
     alias(libs.plugins.noarg)
     alias(libs.plugins.detekt)
     alias(libs.plugins.dokka)
-    id("java-library")
-    id("maven-publish")
 }
 
 version = project.findProperty("version") as String
@@ -21,37 +19,6 @@ repositories {
 }
 
 def javaVersion = VERSION_17
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-
-            groupId = 'taala.keystore'
-            artifactId = 'taala'
-            version = project.version
-
-            pom {
-                name = 'Taala'
-                url = 'https://github.com/YashNabar/taala'
-
-                licenses {
-                    license {
-                        name = 'GNU General Public License v3.0'
-                        url = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
-                    }
-                }
-            }
-        }
-    }
-
-    repositories {
-        maven {
-            name = "localRepo"
-            url = layout.buildDirectory.dir("repo")
-        }
-    }
-}
 
 allprojects {
 
