@@ -1,0 +1,18 @@
+description = 'Keystore implementation'
+
+version = rootProject.version
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation("taala.keystore:taala:1.0.0-SNAPSHOT")
+    testImplementation(libs.bundles.integration.test)
+    testImplementation(libs.bundles.test)
+
+    testRuntimeOnly(libs.junit.engine)
+    testRuntimeOnly(libs.log4j.slf4j)
+    testRuntimeOnly(libs.postgres.driver)
+}
