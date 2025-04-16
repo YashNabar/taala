@@ -1,4 +1,4 @@
-description = 'Keystore implementation'
+description = 'End-to-end tests'
 
 version = rootProject.version
 
