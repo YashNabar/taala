@@ -1,5 +1,9 @@
-description = 'Keystore implementation'
+plugins {
+    id("taala-conventions")
+    id("integration-test")
+}
 
+description = "Keystore implementation"
 version = rootProject.version
 
 dependencies {
@@ -11,11 +15,8 @@ dependencies {
     runtimeOnly(libs.log4j.slf4j)
 
     testImplementation(libs.bundles.test)
-
     testRuntimeOnly(libs.junit.engine)
-
     integrationTestImplementation(libs.bundles.integration.test)
-
     integrationTestRuntimeOnly(libs.junit.engine)
     integrationTestRuntimeOnly(libs.postgres.driver)
 }

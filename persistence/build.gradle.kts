@@ -1,5 +1,10 @@
-description = 'Keystore persistence'
+plugins {
+    id("taala-conventions")
+    id("integration-test")
+    alias(libs.plugins.allopen)
+}
 
+description = "Keystore persistence"
 version = rootProject.version
 
 dependencies {
@@ -10,10 +15,12 @@ dependencies {
     runtimeOnly(libs.log4j.slf4j)
 
     testImplementation(libs.bundles.test)
-
     integrationTestImplementation(libs.bundles.test)
     integrationTestImplementation(libs.bundles.integration.test)
-
     integrationTestRuntimeOnly(libs.junit.engine)
     integrationTestRuntimeOnly(libs.postgres.driver)
+}
+
+allOpen {
+    annotations("jakarta.persistence.Entity")
 }

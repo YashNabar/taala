@@ -37,6 +37,9 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 test-containers = { module = "org.testcontainers:postgresql", version.ref = "test-containers" }
 
 # Build libraries
+detekt = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detektVersion" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version = "kotlinVersion" }
+noarg = { module = "org.jetbrains.kotlin:kotlin-noarg", version.ref = "kotlinVersion" }
 
 [bundles]
 # Production bundles
@@ -49,8 +52,3 @@ integration-test = ["hikari", "test-containers"]
 
 [plugins]
 allopen = {id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlinVersion" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detektVersion" }
-dokka = { id = "org.jetbrains.dokka", version.ref = "dokkaVersion" }
-jpa = {id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlinVersion" }
-jvm = {id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinVersion" }
-noarg = {id = "org.jetbrains.kotlin.plugin.noarg", version.ref = "kotlinVersion" }
