@@ -2,6 +2,7 @@ plugins {
     id("taala-conventions")
     id("integration-test")
     alias(libs.plugins.allopen)
+    alias(libs.plugins.noarg)
 }
 
 description = "Keystore persistence"
@@ -22,5 +23,9 @@ dependencies {
 }
 
 allOpen {
+    annotations("jakarta.persistence.Entity")
+}
+
+noArg {
     annotations("jakarta.persistence.Entity")
 }

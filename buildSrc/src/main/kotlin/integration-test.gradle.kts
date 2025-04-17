@@ -27,3 +27,7 @@ tasks.register<Test>("integrationTest") {
     shouldRunAfter(tasks.named("test"))
     useJUnitPlatform()
 }
+
+project.tasks.withType<ProcessResources>().configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

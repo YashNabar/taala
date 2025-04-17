@@ -16,7 +16,6 @@ junit-platform-suite = "1.12.2"
 testcontainers = "1.20.6"
 
 # Build dependency versions
-dokkaVersion = "2.0.0"
 detektVersion = "1.23.8"
 
 [libraries]
@@ -38,8 +37,7 @@ testcontainers-postgres = { module = "org.testcontainers:postgresql", version.re
 
 # Build libraries
 detekt = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detektVersion" }
-kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version = "kotlinVersion" }
-noarg = { module = "org.jetbrains.kotlin:kotlin-noarg", version.ref = "kotlinVersion" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlinVersion" }
 
 [bundles]
 # Production bundles
@@ -52,3 +50,4 @@ integration-test = ["hikari", "testcontainers-postgres"]
 
 [plugins]
 allopen = {id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlinVersion" }
+noarg = {id = "org.jetbrains.kotlin.plugin.noarg", version.ref = "kotlinVersion" }
