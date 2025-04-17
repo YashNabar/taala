@@ -7,6 +7,7 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
+        mavenLocal()
         mavenCentral()
     }
 }
@@ -15,5 +16,6 @@ rootProject.name = "taala"
 
 include(
     ":keystore",
-    ":persistence"
+    ":persistence",
+    "testing"
 )
