@@ -204,7 +204,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineLoad(stream: InputStream?, password: CharArray?) {
-        throw UnsupportedOperationException()
+        logger.atDebug().log { "Initialized key store." }
     }
 
     private companion object {
