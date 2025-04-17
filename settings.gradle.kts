@@ -17,5 +17,5 @@ rootProject.name = "taala"
 include(
     ":keystore",
     ":persistence",
-    "testing"
+    ":testing"
 )
