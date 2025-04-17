@@ -282,6 +282,23 @@ class KeyStoreImplIntegrationTest {
         }
     }
 
+    @Nested
+    inner class AliasesTests {
+        @Test
+        fun `given entries exist, when engineAliases, then returns all aliases`() {
+            val testAliases = setOf("one, two, three")
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                testAliases.forEach { testAlias ->
+                    session.persist(SecretKeyEntry(testAlias, testSecretKey))
+                }
+            }
+
+            val result = keyStore.engineAliases()
+
+            assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"

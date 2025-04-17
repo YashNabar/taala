@@ -58,6 +58,18 @@ class KeyStoreE2ETest {
         assertThat(secretKeyFromKeyStore).isEqualTo(testSecretKey)
     }
 
+    @Test
+    fun `can retrieve all aliases from key store`() {
+        val testAliases = setOf("one", "two", "three")
+        testAliases.forEach { testAlias ->
+            keyStore.setKeyEntry(testAlias, testSecretKey, null, null)
+        }
+
+        val result = keyStore.aliases()
+
+        assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"

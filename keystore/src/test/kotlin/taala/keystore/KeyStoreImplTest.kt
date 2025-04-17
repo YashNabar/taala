@@ -10,6 +10,8 @@ import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import jakarta.persistence.criteria.Path
+import jakarta.persistence.criteria.Root
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.security.KeyFactory
@@ -22,6 +24,7 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
+import java.util.Collections
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
@@ -31,6 +34,11 @@ import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.Transaction
+import org.hibernate.query.Query
+import org.hibernate.query.criteria.HibernateCriteriaBuilder
+import org.hibernate.query.criteria.JpaCriteriaQuery
+import org.hibernate.query.criteria.JpaPath
+import org.hibernate.query.criteria.JpaRoot
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -533,6 +541,34 @@ class KeyStoreImplTest {
             val result = keyStore.engineIsKeyEntry(alias = null)
 
             assertThat(result).isFalse()
+        }
+    }
+
+    @Nested
+    inner class AliasesTests {
+        @Test
+        fun `given entries exist, when engineAliases, then returns all aliases`() {
+            val testAliases = setOf("one, two, three")
+            val path: JpaPath<String> = mockk()
+            val root: JpaRoot<KeyStoreEntry> = mockk {
+                every { get<String>(eq("alias")) } returns path
+            }
+            val criteriaQuery: JpaCriteriaQuery<String> = mockk {
+                every { from(eq(KeyStoreEntry::class.java)) } returns root
+                every { select(eq(path)) } returns mockk()
+            }
+            val criteriaBuilder: HibernateCriteriaBuilder = mockk {
+                every { createQuery(eq(String::class.java)) } returns criteriaQuery
+            }
+            val query: Query<String> = mockk {
+                every { resultList } returns testAliases
+            }
+            every { session.criteriaBuilder } returns criteriaBuilder
+            every { session.createQuery(criteriaQuery) } returns query
+
+            val result = keyStore.engineAliases()
+
+            assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
         }
     }
 

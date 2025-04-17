@@ -14,6 +14,7 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
+import java.util.Collections
 import java.util.Date
 import java.util.Enumeration
 import javax.crypto.SecretKey
@@ -165,7 +166,15 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineAliases(): Enumeration<String> {
-        throw UnsupportedOperationException()
+        return sessionFactory.openSession().use { session ->
+            val cb = session.criteriaBuilder
+            val query = cb.createQuery(String::class.java)
+            val root = query.from(KeyStoreEntry::class.java)
+            query.select(root.get("alias"))
+
+            val aliases = session.createQuery(query).resultList
+            Collections.enumeration(aliases)
+        }
     }
 
     override fun engineContainsAlias(alias: String?): Boolean {
