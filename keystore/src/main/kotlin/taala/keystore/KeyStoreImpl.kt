@@ -178,7 +178,14 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineContainsAlias(alias: String?): Boolean {
-        throw UnsupportedOperationException()
+        if (alias == null) return false
+        val entry = sessionFactory.openSession().use { session ->
+            session.get(KeyStoreEntry::class.java, alias)
+        }
+        return when (entry) {
+            is SecretKeyEntry, is PrivateKeyEntry, is TrustedCertificateEntry -> true
+            else -> false
+        }
     }
 
     override fun engineSize(): Int {

@@ -13,6 +13,7 @@ import java.util.UUID
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -32,8 +33,10 @@ class KeyStoreE2ETest {
         keyStore.setCertificateEntry(alias, testCertificateB)
         val certificateFromKeyStore = keyStore.getCertificate(alias)
 
-        assertThat(keyStore.isCertificateEntry(alias)).isTrue()
-        assertThat(certificateFromKeyStore).isEqualTo(testCertificateB)
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isCertificateEntry(alias)).isTrue()
+            softly.assertThat(certificateFromKeyStore).isEqualTo(testCertificateB)
+        }
     }
 
     @Test
@@ -44,9 +47,11 @@ class KeyStoreE2ETest {
         val privateKeyFromKeyStore = keyStore.getKey(alias, null)
         val certChainFromKeyStore = keyStore.getCertificateChain(alias)
 
-        assertThat(keyStore.isKeyEntry(alias)).isTrue()
-        assertThat(privateKeyFromKeyStore).isEqualTo(testPrivateKey)
-        assertThat(certChainFromKeyStore).isEqualTo(certificateChain)
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isKeyEntry(alias)).isTrue()
+            softly.assertThat(privateKeyFromKeyStore).isEqualTo(testPrivateKey)
+            softly.assertThat(certChainFromKeyStore).isEqualTo(certificateChain)
+        }
     }
 
     @Test
@@ -54,12 +59,14 @@ class KeyStoreE2ETest {
         keyStore.setKeyEntry(alias, testSecretKey, null, null)
         val secretKeyFromKeyStore = keyStore.getKey(alias, null)
 
-        assertThat(keyStore.isKeyEntry(alias)).isTrue()
-        assertThat(secretKeyFromKeyStore).isEqualTo(testSecretKey)
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isKeyEntry(alias)).isTrue()
+            softly.assertThat(secretKeyFromKeyStore).isEqualTo(testSecretKey)
+        }
     }
 
     @Test
-    fun `can retrieve all aliases from key store`() {
+    fun `can check for and retrieve all aliases from key store`() {
         val testAliases = setOf("one", "two", "three")
         testAliases.forEach { testAlias ->
             keyStore.setKeyEntry(testAlias, testSecretKey, null, null)
@@ -67,7 +74,12 @@ class KeyStoreE2ETest {
 
         val result = keyStore.aliases()
 
-        assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+        assertSoftly { softly ->
+            softly.assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+            testAliases.forEach { testAlias ->
+                softly.assertThat(keyStore.containsAlias(testAlias)).isTrue()
+            }
+        }
     }
 
     private companion object {

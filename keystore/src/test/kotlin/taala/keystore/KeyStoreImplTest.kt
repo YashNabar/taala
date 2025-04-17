@@ -10,8 +10,6 @@ import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.unmockkStatic
 import io.mockk.verify
-import jakarta.persistence.criteria.Path
-import jakarta.persistence.criteria.Root
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.security.KeyFactory
@@ -24,7 +22,6 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
-import java.util.Collections
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
@@ -548,7 +545,7 @@ class KeyStoreImplTest {
     inner class AliasesTests {
         @Test
         fun `given entries exist, when engineAliases, then returns all aliases`() {
-            val testAliases = setOf("one, two, three")
+            val testAliases = listOf("one, two, three")
             val path: JpaPath<String> = mockk()
             val root: JpaRoot<KeyStoreEntry> = mockk {
                 every { get<String>(eq("alias")) } returns path
@@ -569,6 +566,58 @@ class KeyStoreImplTest {
             val result = keyStore.engineAliases()
 
             assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+        }
+    }
+
+    @Nested
+    inner class ContainsAliasTests {
+        @Test
+        fun `given secret key exists for alias, when engineContainsAlias, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given private key exists for alias, when engineContainsAlias, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
+            )
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given certificate exists for alias, when engineContainsAlias, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns TrustedCertificateEntry(
+                KNOWN_ALIAS, existingCertificate
+            )
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given entry does not exist for alias, when engineContainsAlias, then returns false`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given alias is null, when engineContainsAlias, then returns false`() {
+            val result = keyStore.engineContainsAlias(alias = null)
+
+            assertThat(result).isFalse()
         }
     }
 
