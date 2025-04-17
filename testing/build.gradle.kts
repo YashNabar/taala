@@ -1,11 +1,9 @@
-description = 'End-to-end tests'
-
-version = rootProject.version
-
-repositories {
-    mavenLocal()
-    mavenCentral()
+plugins {
+    id("taala-conventions")
 }
+
+description = "End-to-end tests"
+version = rootProject.version
 
 dependencies {
     // Dependency on published artifact

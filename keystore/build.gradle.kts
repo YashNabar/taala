@@ -1,10 +1,10 @@
 plugins {
-    alias(libs.plugins.jvm)
+    id("taala-conventions")
+    id("integration-test")
     id("maven-publish")
 }
 
-description = 'Keystore implementation'
-
+description = "Keystore implementation"
 version = rootProject.version
 
 dependencies {
@@ -17,36 +17,33 @@ dependencies {
 
     testImplementation(project(":persistence"))
     testImplementation(libs.bundles.test)
-
     testRuntimeOnly(libs.junit.engine)
-
     integrationTestImplementation(libs.bundles.integration.test)
-
     integrationTestRuntimeOnly(libs.junit.engine)
     integrationTestRuntimeOnly(libs.postgres.driver)
 }
 
-jar {
-    from project(":persistence").sourceSets.main.output
+tasks.jar {
+    from(project(":persistence").sourceSets["main"].output)
 }
 
 publishing {
     publications {
-        mavenKotlin(MavenPublication) {
-            from components.java
+        create<MavenPublication>("mavenKotlin") {
+            from(components["java"])
 
-            groupId = 'taala.keystore'
-            artifactId = 'taala'
-            version = project.version
+            groupId = "taala.keystore"
+            artifactId = "taala"
+            version = project.version.toString()
 
             pom {
-                name = 'Taala'
-                url = 'https://github.com/YashNabar/taala'
+                name.set("Taala")
+                url.set("https://github.com/YashNabar/taala")
 
                 licenses {
                     license {
-                        name = 'GNU General Public License v3.0'
-                        url = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
+                        name.set("GNU General Public License v3.0")
+                        url.set("https://www.gnu.org/licenses/gpl-3.0.en.html")
                     }
                 }
             }
