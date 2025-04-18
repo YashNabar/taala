@@ -13,6 +13,7 @@ import java.util.UUID
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.sql.DataSource
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -81,6 +82,27 @@ class KeyStoreE2ETest {
                 softly.assertThat(keyStore.containsAlias(testAlias)).isTrue()
             }
             softly.assertThat(keyStore.size()).isEqualTo(testAliases.size)
+        }
+    }
+
+    @Test
+    fun `can delete all entry types from key store`() {
+        dataSource.connection.createStatement().use {
+            it.execute("TRUNCATE TABLE keystore_entry")
+        }
+        val testAliases = listOf("alias-1", "alias-2", "alias-3")
+        keyStore.setKeyEntry(testAliases[0], testSecretKey, null, null)
+        keyStore.setKeyEntry(testAliases[1], testPrivateKey, null, arrayOf(testCertificateA))
+        keyStore.setCertificateEntry(testAliases[2], testCertificateB)
+        assertThat(keyStore.size()).isEqualTo(testAliases.size)
+
+        testAliases.forEach { keyStore.deleteEntry(it) }
+
+        assertSoftly { softly ->
+            testAliases.forEach { testAlias ->
+                softly.assertThat(keyStore.containsAlias(testAlias)).isFalse()
+            }
+            softly.assertThat(keyStore.size()).isEqualTo(0)
         }
     }
 
