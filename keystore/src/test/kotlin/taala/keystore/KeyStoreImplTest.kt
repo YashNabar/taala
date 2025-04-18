@@ -31,6 +31,11 @@ import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.Transaction
+import org.hibernate.query.Query
+import org.hibernate.query.criteria.HibernateCriteriaBuilder
+import org.hibernate.query.criteria.JpaCriteriaQuery
+import org.hibernate.query.criteria.JpaPath
+import org.hibernate.query.criteria.JpaRoot
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -536,6 +541,114 @@ class KeyStoreImplTest {
         }
     }
 
+    @Nested
+    inner class AliasesTests {
+        @Test
+        fun `given entries exist, when engineAliases, then returns all aliases`() {
+            val testAliases = listOf("one, two, three")
+            val path: JpaPath<String> = mockk()
+            val root: JpaRoot<KeyStoreEntry> = mockk {
+                every { get<String>(eq("alias")) } returns path
+            }
+            val criteriaQuery: JpaCriteriaQuery<String> = mockk {
+                every { from(eq(KeyStoreEntry::class.java)) } returns root
+                every { select(eq(path)) } returns mockk()
+            }
+            val criteriaBuilder: HibernateCriteriaBuilder = mockk {
+                every { createQuery(eq(String::class.java)) } returns criteriaQuery
+            }
+            val query: Query<String> = mockk {
+                every { resultList } returns testAliases
+            }
+            every { session.criteriaBuilder } returns criteriaBuilder
+            every { session.createQuery(criteriaQuery) } returns query
+
+            val result = keyStore.engineAliases()
+
+            assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+        }
+    }
+
+    @Nested
+    inner class ContainsAliasTests {
+        @Test
+        fun `given secret key exists for alias, when engineContainsAlias, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+                KNOWN_ALIAS, existingSecretKey
+            )
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given private key exists for alias, when engineContainsAlias, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+                KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
+            )
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given certificate exists for alias, when engineContainsAlias, then returns true`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns TrustedCertificateEntry(
+                KNOWN_ALIAS, existingCertificate
+            )
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given entry does not exist for alias, when engineContainsAlias, then returns false`() {
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val result = keyStore.engineContainsAlias(KNOWN_ALIAS)
+
+            assertThat(result).isFalse()
+        }
+
+        @Test
+        fun `given alias is null, when engineContainsAlias, then returns false`() {
+            val result = keyStore.engineContainsAlias(alias = null)
+
+            assertThat(result).isFalse()
+        }
+    }
+
+    @Nested
+    inner class SizeTests {
+        @Test
+        fun `given entries exist, when engineSize, then returns number of stored entries`() {
+            val testAliases = listOf("one, two, three")
+            val path: JpaPath<String> = mockk()
+            val root: JpaRoot<KeyStoreEntry> = mockk {
+                every { get<String>(eq("alias")) } returns path
+            }
+            val criteriaQuery: JpaCriteriaQuery<String> = mockk {
+                every { from(eq(KeyStoreEntry::class.java)) } returns root
+                every { select(eq(path)) } returns mockk()
+            }
+            val criteriaBuilder: HibernateCriteriaBuilder = mockk {
+                every { createQuery(eq(String::class.java)) } returns criteriaQuery
+            }
+            val query: Query<String> = mockk {
+                every { resultList } returns testAliases
+            }
+            every { session.criteriaBuilder } returns criteriaBuilder
+            every { session.createQuery(criteriaQuery) } returns query
+
+            val result = keyStore.engineSize()
+
+            assertThat(result).isEqualTo(testAliases.size)
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"
@@ -571,9 +684,9 @@ class KeyStoreImplTest {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            keyStore = KeyStoreImpl(dataSource)
             mockkObject(HibernateHelper)
             every { HibernateHelper.buildSessionFactory(any()) } returns sessionFactory
+            keyStore = KeyStoreImpl(dataSource)
         }
 
         @JvmStatic

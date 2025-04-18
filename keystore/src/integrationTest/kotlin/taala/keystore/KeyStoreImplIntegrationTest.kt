@@ -282,6 +282,97 @@ class KeyStoreImplIntegrationTest {
         }
     }
 
+    @Nested
+    inner class AliasesTests {
+        @Test
+        fun `given entries exist, when engineAliases, then returns all aliases`() {
+            dataSource.connection.createStatement().use {
+                it.execute("TRUNCATE TABLE keystore_entry")
+            }
+            val entries = setOf(
+                SecretKeyEntry("one", testSecretKey),
+                PrivateKeyEntry("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
+                TrustedCertificateEntry("three", testCertificateA),
+            )
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                entries.forEach { entry ->
+                    session.persist(entry)
+                }
+            }
+
+            val result = keyStore.engineAliases()
+
+            assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(entries.map { it.alias })
+        }
+    }
+
+    @Nested
+    inner class ContainsAliasTests {
+        @Test
+        fun `given secret key exists for alias, when engineContainsAlias, then returns true`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry(alias, testSecretKey))
+            }
+
+            val result = keyStore.engineContainsAlias(alias)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given private key exists for alias, when engineContainsAlias, then returns true`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(PrivateKeyEntry(alias, testPrivateKey, listOf(testCertificateA)))
+            }
+
+            val result = keyStore.engineContainsAlias(alias)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given certificate exists for alias, when engineContainsAlias, then returns true`() {
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(TrustedCertificateEntry(alias, testCertificateA))
+            }
+
+            val result = keyStore.engineContainsAlias(alias)
+
+            assertThat(result).isTrue()
+        }
+
+        @Test
+        fun `given entry does not exist for alias, when engineContainsAlias, then returns false`() {
+            val result = keyStore.engineContainsAlias(alias = "non-existent")
+
+            assertThat(result).isFalse()
+        }
+    }
+
+    @Nested
+    inner class SizeTests {
+        @Test
+        fun `given entries exist, when engineSize, then returns number of stored entries`() {
+            dataSource.connection.createStatement().use {
+                it.execute("TRUNCATE TABLE keystore_entry")
+            }
+            val entries = setOf(
+                SecretKeyEntry("one", testSecretKey),
+                PrivateKeyEntry("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
+                TrustedCertificateEntry("three", testCertificateA),
+            )
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                entries.forEach { entry ->
+                    session.persist(entry)
+                }
+            }
+
+            val result = keyStore.engineSize()
+
+            assertThat(result).isEqualTo(entries.size)
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"

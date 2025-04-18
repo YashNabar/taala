@@ -12,7 +12,8 @@ import java.security.cert.CertificateFactory
 import java.util.UUID
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-import org.assertj.core.api.Assertions.assertThat
+import javax.sql.DataSource
+import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -32,8 +33,10 @@ class KeyStoreE2ETest {
         keyStore.setCertificateEntry(alias, testCertificateB)
         val certificateFromKeyStore = keyStore.getCertificate(alias)
 
-        assertThat(keyStore.isCertificateEntry(alias)).isTrue()
-        assertThat(certificateFromKeyStore).isEqualTo(testCertificateB)
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isCertificateEntry(alias)).isTrue()
+            softly.assertThat(certificateFromKeyStore).isEqualTo(testCertificateB)
+        }
     }
 
     @Test
@@ -44,9 +47,11 @@ class KeyStoreE2ETest {
         val privateKeyFromKeyStore = keyStore.getKey(alias, null)
         val certChainFromKeyStore = keyStore.getCertificateChain(alias)
 
-        assertThat(keyStore.isKeyEntry(alias)).isTrue()
-        assertThat(privateKeyFromKeyStore).isEqualTo(testPrivateKey)
-        assertThat(certChainFromKeyStore).isEqualTo(certificateChain)
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isKeyEntry(alias)).isTrue()
+            softly.assertThat(privateKeyFromKeyStore).isEqualTo(testPrivateKey)
+            softly.assertThat(certChainFromKeyStore).isEqualTo(certificateChain)
+        }
     }
 
     @Test
@@ -54,8 +59,29 @@ class KeyStoreE2ETest {
         keyStore.setKeyEntry(alias, testSecretKey, null, null)
         val secretKeyFromKeyStore = keyStore.getKey(alias, null)
 
-        assertThat(keyStore.isKeyEntry(alias)).isTrue()
-        assertThat(secretKeyFromKeyStore).isEqualTo(testSecretKey)
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isKeyEntry(alias)).isTrue()
+            softly.assertThat(secretKeyFromKeyStore).isEqualTo(testSecretKey)
+        }
+    }
+
+    @Test
+    fun `can check for and retrieve all aliases from key store`() {
+        dataSource.connection.createStatement().use {
+            it.execute("TRUNCATE TABLE keystore_entry")
+        }
+        val testAliases = listOf("alias-1", "alias-2", "alias-3")
+        keyStore.setKeyEntry(testAliases[0], testSecretKey, null, null)
+        keyStore.setKeyEntry(testAliases[1], testPrivateKey, null, arrayOf(testCertificateA))
+        keyStore.setCertificateEntry(testAliases[2], testCertificateB)
+
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.aliases().toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+            testAliases.forEach { testAlias ->
+                softly.assertThat(keyStore.containsAlias(testAlias)).isTrue()
+            }
+            softly.assertThat(keyStore.size()).isEqualTo(testAliases.size)
+        }
     }
 
     private companion object {
@@ -65,6 +91,7 @@ class KeyStoreE2ETest {
 
         lateinit var keyStore: KeyStore
         lateinit var alias: String
+        lateinit var dataSource: DataSource
         val database = PostgreSQLContainer(DockerImageName.parse("postgres:17"))
         val certificateFactory: CertificateFactory = CertificateFactory.getInstance(CERTIFICATE_TYPE)
         val secretKeyFactory: KeyGenerator = KeyGenerator.getInstance(SECRET_KEY_TYPE).also { it.init(256) }
@@ -83,7 +110,7 @@ class KeyStoreE2ETest {
         @BeforeAll
         fun init() {
             database.start()
-            val dataSource = HikariDataSource(
+            dataSource = HikariDataSource(
                 HikariConfig().apply {
                     jdbcUrl = database.jdbcUrl
                     username = database.username

@@ -14,6 +14,7 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
+import java.util.Collections
 import java.util.Date
 import java.util.Enumeration
 import javax.crypto.SecretKey
@@ -30,9 +31,7 @@ import taala.persistence.orm.HibernateHelper.withTransaction
 
 @Suppress("TooManyFunctions")
 class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
-    private val sessionFactory by lazy {
-        HibernateHelper.buildSessionFactory(dataSource)
-    }
+    private val sessionFactory = HibernateHelper.buildSessionFactory(dataSource)
 
     override fun engineGetKey(alias: String?, password: CharArray?): Key? {
         if (alias == null) return null
@@ -165,15 +164,30 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineAliases(): Enumeration<String> {
-        throw UnsupportedOperationException()
+        return sessionFactory.openSession().use { session ->
+            val cb = session.criteriaBuilder
+            val query = cb.createQuery(String::class.java)
+            val root = query.from(KeyStoreEntry::class.java)
+            query.select(root.get("alias"))
+
+            val aliases = session.createQuery(query).resultList
+            Collections.enumeration(aliases)
+        }
     }
 
     override fun engineContainsAlias(alias: String?): Boolean {
-        throw UnsupportedOperationException()
+        if (alias == null) return false
+        val entry = sessionFactory.openSession().use { session ->
+            session.get(KeyStoreEntry::class.java, alias)
+        }
+        return when (entry) {
+            is SecretKeyEntry, is PrivateKeyEntry, is TrustedCertificateEntry -> true
+            else -> false
+        }
     }
 
     override fun engineSize(): Int {
-        throw UnsupportedOperationException()
+        return engineAliases().toList().size
     }
 
     override fun engineIsKeyEntry(alias: String?): Boolean {
