@@ -684,9 +684,9 @@ class KeyStoreImplTest {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            keyStore = KeyStoreImpl(dataSource)
             mockkObject(HibernateHelper)
             every { HibernateHelper.buildSessionFactory(any()) } returns sessionFactory
+            keyStore = KeyStoreImpl(dataSource)
         }
 
         @JvmStatic

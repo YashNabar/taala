@@ -31,9 +31,7 @@ import taala.persistence.orm.HibernateHelper.withTransaction
 
 @Suppress("TooManyFunctions")
 class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
-    private val sessionFactory by lazy {
-        HibernateHelper.buildSessionFactory(dataSource)
-    }
+    private val sessionFactory = HibernateHelper.buildSessionFactory(dataSource)
 
     override fun engineGetKey(alias: String?, password: CharArray?): Key? {
         if (alias == null) return null
