@@ -621,6 +621,34 @@ class KeyStoreImplTest {
         }
     }
 
+    @Nested
+    inner class SizeTests {
+        @Test
+        fun `given entries exist, when engineSize, then returns number of stored entries`() {
+            val testAliases = listOf("one, two, three")
+            val path: JpaPath<String> = mockk()
+            val root: JpaRoot<KeyStoreEntry> = mockk {
+                every { get<String>(eq("alias")) } returns path
+            }
+            val criteriaQuery: JpaCriteriaQuery<String> = mockk {
+                every { from(eq(KeyStoreEntry::class.java)) } returns root
+                every { select(eq(path)) } returns mockk()
+            }
+            val criteriaBuilder: HibernateCriteriaBuilder = mockk {
+                every { createQuery(eq(String::class.java)) } returns criteriaQuery
+            }
+            val query: Query<String> = mockk {
+                every { resultList } returns testAliases
+            }
+            every { session.criteriaBuilder } returns criteriaBuilder
+            every { session.createQuery(criteriaQuery) } returns query
+
+            val result = keyStore.engineSize()
+
+            assertThat(result).isEqualTo(testAliases.size)
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"

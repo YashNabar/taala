@@ -189,7 +189,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineSize(): Int {
-        throw UnsupportedOperationException()
+        return engineAliases().toList().size
     }
 
     override fun engineIsKeyEntry(alias: String?): Boolean {

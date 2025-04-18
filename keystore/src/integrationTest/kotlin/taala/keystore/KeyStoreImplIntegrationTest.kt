@@ -286,16 +286,23 @@ class KeyStoreImplIntegrationTest {
     inner class AliasesTests {
         @Test
         fun `given entries exist, when engineAliases, then returns all aliases`() {
-            val testAliases = setOf("one, two, three")
+            dataSource.connection.createStatement().use {
+                it.execute("TRUNCATE TABLE keystore_entry")
+            }
+            val entries = setOf(
+                SecretKeyEntry("one", testSecretKey),
+                PrivateKeyEntry("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
+                TrustedCertificateEntry("three", testCertificateA),
+            )
             HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
-                testAliases.forEach { testAlias ->
-                    session.persist(SecretKeyEntry(testAlias, testSecretKey))
+                entries.forEach { entry ->
+                    session.persist(entry)
                 }
             }
 
             val result = keyStore.engineAliases()
 
-            assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+            assertThat(result.toList()).containsExactlyInAnyOrderElementsOf(entries.map { it.alias })
         }
     }
 
@@ -339,6 +346,30 @@ class KeyStoreImplIntegrationTest {
             val result = keyStore.engineContainsAlias(alias = "non-existent")
 
             assertThat(result).isFalse()
+        }
+    }
+
+    @Nested
+    inner class SizeTests {
+        @Test
+        fun `given entries exist, when engineSize, then returns number of stored entries`() {
+            dataSource.connection.createStatement().use {
+                it.execute("TRUNCATE TABLE keystore_entry")
+            }
+            val entries = setOf(
+                SecretKeyEntry("one", testSecretKey),
+                PrivateKeyEntry("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
+                TrustedCertificateEntry("three", testCertificateA),
+            )
+            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+                entries.forEach { entry ->
+                    session.persist(entry)
+                }
+            }
+
+            val result = keyStore.engineSize()
+
+            assertThat(result).isEqualTo(entries.size)
         }
     }
 
