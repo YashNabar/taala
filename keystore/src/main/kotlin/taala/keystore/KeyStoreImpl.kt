@@ -160,7 +160,13 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     }
 
     override fun engineDeleteEntry(alias: String?) {
-        throw UnsupportedOperationException()
+        requireNotNull(alias) { throw KeyStoreException("Alias was null. Key store entry was not removed.") }
+        sessionFactory.withTransaction { session ->
+            val entry = session.get(KeyStoreEntry::class.java, alias)
+                ?: throw KeyStoreException("Key store entry with alias '$alias' does not exist.")
+
+            session.remove(entry)
+        }
     }
 
     override fun engineAliases(): Enumeration<String> {

@@ -649,6 +649,40 @@ class KeyStoreImplTest {
         }
     }
 
+    @Nested
+    inner class DeleteEntryTests {
+        @Test
+        fun `given entry exists, when engineDeleteEntry, then removes entry`() {
+            val testEntry = PrivateKeyEntry(KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate))
+            every { session.get(KeyStoreEntry::class.java, any()) } returns testEntry
+
+            keyStore.engineDeleteEntry(KNOWN_ALIAS)
+
+            verify { session.remove(testEntry) }
+        }
+
+        @Test
+        fun `given alias is null, when engineDeleteEntry, then throws exception`() {
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineDeleteEntry(alias = null)
+            }
+
+            assertThat(ex).hasMessageContaining("Alias was null")
+        }
+
+        @Test
+        fun `given alias does not exist, when engineDeleteEntry, then throws exception`() {
+            val alias = "unknown"
+            every { session.get(KeyStoreEntry::class.java, any()) } returns null
+
+            val ex = assertThrows<KeyStoreException> {
+                keyStore.engineDeleteEntry(alias)
+            }
+
+            assertThat(ex).hasMessageContaining("does not exist")
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"

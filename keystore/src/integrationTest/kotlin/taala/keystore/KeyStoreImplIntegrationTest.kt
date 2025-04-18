@@ -373,6 +373,24 @@ class KeyStoreImplIntegrationTest {
         }
     }
 
+    @Nested
+    inner class DeleteEntryTests {
+        @Test
+        fun `given entry exists, when engineDeleteEntry, then removes entry from key store`() {
+            val sessionFactory = HibernateHelper.buildSessionFactory(dataSource)
+            sessionFactory.withTransaction { session ->
+                session.persist(PrivateKeyEntry(alias, testPrivateKey, listOf(testCertificateA, testCertificateB)))
+            }
+
+            keyStore.engineDeleteEntry(alias)
+
+            val result = sessionFactory.openSession().use { session ->
+                session.get(PrivateKeyEntry::class.java, alias)
+            }
+            assertThat(result).isNull()
+        }
+    }
+
     private companion object {
         const val CERTIFICATE_TYPE = "X.509"
         const val SECRET_KEY_TYPE = "AES"
