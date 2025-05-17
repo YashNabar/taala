@@ -1,9 +1,9 @@
 [versions]
 # Production dependency versions
-hibernateVersion = "6.6.13.Final"
+hibernateVersion = "6.6.15.Final"
 hikari = "6.3.0"
 jakartaVersion = "3.2.0"
-kotlinVersion = "2.1.20"
+kotlinVersion = "2.1.21"
 log4j = "2.24.3"
 mockk = "1.14.2"
 postgres = "42.7.5"
