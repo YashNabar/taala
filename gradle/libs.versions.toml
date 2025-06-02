@@ -11,7 +11,7 @@ slf4j = "2.0.17"
 
 # Test dependency versions
 assertjVersion = "3.27.3"
-junit5Version = "5.12.2"
+junit5Version = "5.13.0"
 junit-platform-suite = "1.12.2"
 testcontainers = "1.21.1"
 
