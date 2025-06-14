@@ -6,13 +6,13 @@ jakartaVersion = "3.2.0"
 kotlinVersion = "2.1.21"
 log4j = "2.24.3"
 mockk = "1.14.2"
-postgres = "42.7.6"
+postgres = "42.7.7"
 slf4j = "2.0.17"
 
 # Test dependency versions
 assertjVersion = "3.27.3"
-junit5Version = "5.13.0"
-junit-platform-suite = "1.13.0"
+junit5Version = "5.13.1"
+junit-platform-suite = "1.13.1"
 testcontainers = "1.21.1"
 
 # Build dependency versions
