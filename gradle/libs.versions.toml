@@ -3,7 +3,7 @@
 hibernateVersion = "6.6.15.Final"
 hikari = "7.0.2"
 jakartaVersion = "3.2.0"
-kotlinVersion = "2.2.21"
+kotlinVersion = "2.2.20"
 log4j = "2.25.2"
 mockk = "1.14.6"
 postgres = "42.7.8"
