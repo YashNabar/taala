@@ -4,16 +4,16 @@ hibernateVersion = "6.6.15.Final"
 hikari = "7.0.2"
 jakartaVersion = "3.2.0"
 kotlinVersion = "2.2.20"
-log4j = "2.25.2"
-mockk = "1.14.5"
+log4j = "2.25.3"
+mockk = "1.14.7"
 postgres = "42.7.8"
 slf4j = "2.0.17"
 
 # Test dependency versions
 assertjVersion = "3.27.6"
 junit5Version = "5.13.4"
-junit-platform-suite = "6.0.0"
-testcontainers = "1.21.3"
+junit-platform-suite = "6.0.1"
+testcontainers = "1.21.4"
 
 # Build dependency versions
 detektVersion = "1.23.8"
