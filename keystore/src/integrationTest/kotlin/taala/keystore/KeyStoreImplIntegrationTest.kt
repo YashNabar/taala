@@ -59,7 +59,7 @@ class KeyStoreImplIntegrationTest {
             keyStore.engineSetCertificateEntry(alias, testCertificateB)
 
             val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
-                val entity = session.get(TrustedCertificateEntry::class.java, alias)
+                val entity = session.find(TrustedCertificateEntry::class.java, alias)
                 CertificateFactory.getInstance(CERTIFICATE_TYPE)
                     .generateCertPath(ByteArrayInputStream(entity.chain))
                     .certificates.first()
@@ -91,7 +91,7 @@ class KeyStoreImplIntegrationTest {
             keyStore.engineSetCertificateEntry(alias, testCertificateB)
 
             val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
-                val entity = session.get(TrustedCertificateEntry::class.java, alias)
+                val entity = session.find(TrustedCertificateEntry::class.java, alias)
                 CertificateFactory.getInstance(CERTIFICATE_TYPE)
                     .generateCertPath(ByteArrayInputStream(entity.chain))
                     .certificates.first()
@@ -176,7 +176,7 @@ class KeyStoreImplIntegrationTest {
             keyStore.engineSetKeyEntry(alias, testSecretKey, null, null)
 
             val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
-                val entity = session.get(SecretKeyEntry::class.java, alias)
+                val entity = session.find(SecretKeyEntry::class.java, alias)
                 SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
             }
 
@@ -188,7 +188,7 @@ class KeyStoreImplIntegrationTest {
             keyStore.engineSetKeyEntry(alias, testPrivateKey, null, listOf(testCertificateB).toTypedArray())
 
             val (key, chain) = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
-                val entity = session.get(PrivateKeyEntry::class.java, alias)
+                val entity = session.find(PrivateKeyEntry::class.java, alias)
                 val key = KeyFactory.getInstance(PRIVATE_KEY_TYPE).generatePrivate(PKCS8EncodedKeySpec(entity.privateKey))
                 val chain = certificateFactory.generateCertPath(ByteArrayInputStream(entity.chain)).certificates
                 key to chain
@@ -218,7 +218,7 @@ class KeyStoreImplIntegrationTest {
             keyStore.engineSetKeyEntry(alias, testSecretKey, null, null)
 
             val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
-                val entity = session.get(SecretKeyEntry::class.java, alias)
+                val entity = session.find(SecretKeyEntry::class.java, alias)
                 SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
             }
             assertThat(result).isEqualTo(testSecretKey)
@@ -385,7 +385,7 @@ class KeyStoreImplIntegrationTest {
             keyStore.engineDeleteEntry(alias)
 
             val result = sessionFactory.openSession().use { session ->
-                session.get(PrivateKeyEntry::class.java, alias)
+                session.find(PrivateKeyEntry::class.java, alias)
             }
             assertThat(result).isNull()
         }
