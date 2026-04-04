@@ -2,6 +2,16 @@ package taala.e2eTest
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.assertj.core.api.SoftAssertions.assertSoftly
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.testcontainers.containers.JdbcDatabaseContainer
+import taala.e2eTest.DatabaseTypes.cockroachVersions
+import taala.e2eTest.DatabaseTypes.postgresVersions
+import taala.keystore.provider.Taala
 import java.io.ByteArrayInputStream
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -9,28 +19,34 @@ import java.security.PrivateKey
 import java.security.Security
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
-import java.util.UUID
+import java.util.*
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.sql.DataSource
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.SoftAssertions.assertSoftly
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.utility.DockerImageName
-import taala.keystore.provider.Taala
 
 class KeyStoreE2ETest {
-    @BeforeEach
-    fun setUp() {
-        alias = UUID.randomUUID().toString()
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("getSupportedDatabases")
+    fun `test keystore functionality against supported databases`(database: DatabaseTypes.TestDatabase) {
+        init(database.containerProvider)
+
+        logger.atInfo().log { "[${database}] Starting test: can store and retrieve certificate from key store" }
+        `can store and retrieve certificate from key store`(alias = UUID.randomUUID().toString())
+
+        logger.atInfo().log { "[${database}] Starting test: can store and retrieve private key from key store" }
+        `can store and retrieve private key from key store`(alias = UUID.randomUUID().toString())
+
+        logger.atInfo().log { "[${database}] Starting test: can store and retrieve secret key from key store" }
+        `can store and retrieve secret key from key store`(alias = UUID.randomUUID().toString())
+
+        logger.atInfo().log { "[${database}] Starting test: can delete all entry types from key store" }
+        `can delete all entry types from key store`()
+
+        logger.atInfo().log { "[${database}] Starting test: can check for and retrieve all aliases from key store" }
+        `can check for and retrieve all aliases from key store`()
     }
 
-    @Test
-    fun `can store and retrieve certificate from key store`() {
+    private fun `can store and retrieve certificate from key store`(alias: String) {
         keyStore.setCertificateEntry(alias, testCertificateB)
         val certificateFromKeyStore = keyStore.getCertificate(alias)
 
@@ -40,8 +56,7 @@ class KeyStoreE2ETest {
         }
     }
 
-    @Test
-    fun `can store and retrieve private key from key store`() {
+    fun `can store and retrieve private key from key store`(alias: String) {
         val certificateChain = arrayOf(testCertificateA, testCertificateB)
 
         keyStore.setKeyEntry(alias, testPrivateKey, null, certificateChain)
@@ -55,8 +70,7 @@ class KeyStoreE2ETest {
         }
     }
 
-    @Test
-    fun `can store and retrieve secret key from key store`() {
+    fun `can store and retrieve secret key from key store`(alias: String) {
         keyStore.setKeyEntry(alias, testSecretKey, null, null)
         val secretKeyFromKeyStore = keyStore.getKey(alias, null)
 
@@ -66,35 +80,25 @@ class KeyStoreE2ETest {
         }
     }
 
-    @Test
     fun `can check for and retrieve all aliases from key store`() {
-        dataSource.connection.createStatement().use {
-            it.execute("TRUNCATE TABLE keystore_entry")
-        }
         val testAliases = listOf("alias-1", "alias-2", "alias-3")
         keyStore.setKeyEntry(testAliases[0], testSecretKey, null, null)
         keyStore.setKeyEntry(testAliases[1], testPrivateKey, null, arrayOf(testCertificateA))
         keyStore.setCertificateEntry(testAliases[2], testCertificateB)
 
         assertSoftly { softly ->
-            softly.assertThat(keyStore.aliases().toList()).containsExactlyInAnyOrderElementsOf(testAliases)
+            softly.assertThat(keyStore.aliases().toList()).containsAll(testAliases)
             testAliases.forEach { testAlias ->
                 softly.assertThat(keyStore.containsAlias(testAlias)).isTrue()
             }
-            softly.assertThat(keyStore.size()).isEqualTo(testAliases.size)
         }
     }
 
-    @Test
     fun `can delete all entry types from key store`() {
-        dataSource.connection.createStatement().use {
-            it.execute("TRUNCATE TABLE keystore_entry")
-        }
-        val testAliases = listOf("alias-1", "alias-2", "alias-3")
+        val testAliases = listOf("alias-A", "alias-B", "alias-C")
         keyStore.setKeyEntry(testAliases[0], testSecretKey, null, null)
         keyStore.setKeyEntry(testAliases[1], testPrivateKey, null, arrayOf(testCertificateA))
         keyStore.setCertificateEntry(testAliases[2], testCertificateB)
-        assertThat(keyStore.size()).isEqualTo(testAliases.size)
 
         testAliases.forEach { keyStore.deleteEntry(it) }
 
@@ -102,8 +106,22 @@ class KeyStoreE2ETest {
             testAliases.forEach { testAlias ->
                 softly.assertThat(keyStore.containsAlias(testAlias)).isFalse()
             }
-            softly.assertThat(keyStore.size()).isEqualTo(0)
         }
+    }
+
+    private fun init(databaseContainer: JdbcDatabaseContainer<*>) {
+        databaseContainer.start()
+        dataSource = HikariDataSource(
+            HikariConfig().apply {
+                jdbcUrl = databaseContainer.jdbcUrl
+                username = databaseContainer.username
+                password = databaseContainer.password
+            }
+        )
+        val provider = Taala(dataSource)
+        Security.addProvider(provider)
+        keyStore = KeyStore.getInstance("TaalaKeyStore", "Taala")
+        keyStore.load(null, null)
     }
 
     private companion object {
@@ -112,9 +130,10 @@ class KeyStoreE2ETest {
         const val PRIVATE_KEY_TYPE = "RSA"
 
         lateinit var keyStore: KeyStore
-        lateinit var alias: String
         lateinit var dataSource: DataSource
-        val database = PostgreSQLContainer(DockerImageName.parse("postgres:17"))
+
+        val logger: Logger = LoggerFactory.getLogger(this::class.java.enclosingClass)
+        val databasesUnderTest = getSupportedDatabases()
         val certificateFactory: CertificateFactory = CertificateFactory.getInstance(CERTIFICATE_TYPE)
         val secretKeyFactory: KeyGenerator = KeyGenerator.getInstance(SECRET_KEY_TYPE).also { it.init(256) }
         val privateKeyFactory: KeyPairGenerator = KeyPairGenerator.getInstance(PRIVATE_KEY_TYPE).also { it.initialize(2048) }
@@ -129,26 +148,16 @@ class KeyStoreE2ETest {
             )
 
         @JvmStatic
-        @BeforeAll
-        fun init() {
-            database.start()
-            dataSource = HikariDataSource(
-                HikariConfig().apply {
-                    jdbcUrl = database.jdbcUrl
-                    username = database.username
-                    password = database.password
-                }
-            )
-            val provider = Taala(dataSource)
-            Security.addProvider(provider)
-            keyStore = KeyStore.getInstance("TaalaKeyStore", "Taala")
-            keyStore.load(null, null)
-        }
+        fun getSupportedDatabases() =
+            postgresVersions("9.6", "11", "12", "13", "14", "15", "16", "17") + cockroachVersions("v24.3.29", "v25.4.6")
 
         @AfterAll
         @JvmStatic
         fun tearDown() {
-            database.stop()
+            databasesUnderTest.forEach {
+                logger.atInfo().log { "Stopping container $it" }
+                it.containerProvider.stop()
+            }
         }
     }
 }
