@@ -28,7 +28,7 @@ object DatabaseTypes {
             TestDatabase(
                 name = "Cockroach",
                 version = it,
-                containerProvider = CockroachContainer("cockroachdb/cockroach:$it")
+                containerProvider = CockroachContainer(DockerImageName.parse("cockroachdb/cockroach:$it"))
             )
         }
 }
