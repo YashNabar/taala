@@ -44,8 +44,10 @@ jobs:
       - name: Package release artifacts
         run: |
           RELEASE_DIR=taala-${{ github.event.inputs.version }}
+          RELEASE_VERSION=${{ github.event.inputs.version }}
           mkdir -p $RELEASE_DIR
-          cp build/libs/taala-*.jar $RELEASE_DIR/
+          cp keystore/build/libs/keystore-$RELEASE_VERSION.jar $RELEASE_DIR/taala-$RELEASE_VERSION.jar
+          cp keystore/build/libs/keystore-$RELEASE_VERSION-sources.jar $RELEASE_DIR/taala-$RELEASE_VERSION-sources.jar
           cp LICENSE NOTICE $RELEASE_DIR/
           zip -r ${RELEASE_DIR}.zip $RELEASE_DIR
           tar -czvf ${RELEASE_DIR}.tar.gz $RELEASE_DIR
