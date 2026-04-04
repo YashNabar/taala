@@ -19,6 +19,7 @@ Taala currently supports the following key and certificate types:
 
 Taala currently supports the following databases:
 - PostgreSQL: 9.6, 11, 12, 13, 14, 15, 16, 17
+- CockroachDB: 24.3, 25.4
 
 ## How To Use The Provider
 Java applications can register the provider and obtain an instance of `KeyStore` as shown below.

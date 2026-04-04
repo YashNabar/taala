@@ -36,7 +36,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     override fun engineGetKey(alias: String?, password: CharArray?): Key? {
         if (alias == null) return null
         return sessionFactory.openSession().use { session ->
-            when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
+            when (val entry = session.find(KeyStoreEntry::class.java, alias)) {
                 is SecretKeyEntry -> SecretKeySpec(entry.secretKey, entry.keyType)
                 is PrivateKeyEntry -> try {
                     KeyFactory.getInstance(entry.keyType).generatePrivate(PKCS8EncodedKeySpec(entry.privateKey))
@@ -54,7 +54,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         if (alias == null) return null
         return try {
             sessionFactory.openSession().use { session ->
-                when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
+                when (val entry = session.find(KeyStoreEntry::class.java, alias)) {
                     is PrivateKeyEntry -> {
                         CertificateFactory.getInstance(entry.certificateType)
                             .generateCertPath(ByteArrayInputStream(entry.chain))
@@ -74,7 +74,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
         if (alias == null) return null
         return try {
             sessionFactory.openSession().use { session ->
-                when (val entry = session.get(KeyStoreEntry::class.java, alias)) {
+                when (val entry = session.find(KeyStoreEntry::class.java, alias)) {
                     is TrustedCertificateEntry, is PrivateKeyEntry -> {
                         CertificateFactory.getInstance(entry.certificateType)
                             .generateCertPath(ByteArrayInputStream(entry.chain))
@@ -112,7 +112,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
             else -> throw UnsupportedOperationException()
         }
         sessionFactory.withTransaction { session ->
-            when (val existingEntry = session.get(KeyStoreEntry::class.java, alias)) {
+            when (val existingEntry = session.find(KeyStoreEntry::class.java, alias)) {
                 is SecretKeyEntry, is PrivateKeyEntry -> {
                     logger.atDebug().log { "Overwriting existing key entry in key store under alias '$alias'." }
                     session.remove(existingEntry)
@@ -141,7 +141,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
 
         val newEntry = TrustedCertificateEntry(alias, cert)
         sessionFactory.withTransaction { session ->
-            when (session.get(KeyStoreEntry::class.java, alias)) {
+            when (session.find(KeyStoreEntry::class.java, alias)) {
                 is TrustedCertificateEntry -> {
                     logger.atDebug().log { "Overwriting existing certificate entry in key store under alias '$alias'." }
                     session.merge(newEntry)
@@ -162,7 +162,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     override fun engineDeleteEntry(alias: String?) {
         requireNotNull(alias) { throw KeyStoreException("Alias was null. Key store entry was not removed.") }
         sessionFactory.withTransaction { session ->
-            val entry = session.get(KeyStoreEntry::class.java, alias)
+            val entry = session.find(KeyStoreEntry::class.java, alias)
                 ?: throw KeyStoreException("Key store entry with alias '$alias' does not exist.")
 
             session.remove(entry)
@@ -184,7 +184,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     override fun engineContainsAlias(alias: String?): Boolean {
         if (alias == null) return false
         val entry = sessionFactory.openSession().use { session ->
-            session.get(KeyStoreEntry::class.java, alias)
+            session.find(KeyStoreEntry::class.java, alias)
         }
         return when (entry) {
             is SecretKeyEntry, is PrivateKeyEntry, is TrustedCertificateEntry -> true
@@ -199,7 +199,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     override fun engineIsKeyEntry(alias: String?): Boolean {
         if (alias == null) return false
         val entry = sessionFactory.openSession().use { session ->
-            session.get(KeyStoreEntry::class.java, alias)
+            session.find(KeyStoreEntry::class.java, alias)
         }
         return when (entry) {
             is SecretKeyEntry, is PrivateKeyEntry -> true
@@ -210,7 +210,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     override fun engineIsCertificateEntry(alias: String?): Boolean {
         if (alias == null) return false
         val entry = sessionFactory.openSession().use { session ->
-            session.get(TrustedCertificateEntry::class.java, alias)
+            session.find(TrustedCertificateEntry::class.java, alias)
         }
         return entry != null
     }
