@@ -55,7 +55,7 @@ jobs:
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: Taala v${{ github.event.inputs.version }}
-          body: Release ${{ github.event.inputs.version }}
+          body: Release v${{ github.event.inputs.version }}
           files: |
             taala-${{ github.event.inputs.version }}.zip
             taala-${{ github.event.inputs.version }}.tar.gz
