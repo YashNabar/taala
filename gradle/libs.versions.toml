@@ -1,6 +1,6 @@
 [versions]
 # Production dependency versions
-hibernateVersion = "7.3.1.Final"
+hibernateVersion = "7.3.2.Final"
 hikari = "7.0.2"
 jakartaVersion = "3.2.0"
 kotlinVersion = "2.2.20"
@@ -34,7 +34,7 @@ junit-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", ver
 junit-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit5Version" }
 junit-platform-suite = { group = 'org.junit.platform', name = 'junit-platform-suite', version.ref = "junit-platform-suite" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
-testcontainers-cockroach = { module = "org.testcontainers:testcontainers-cockroachdb", version = "2.0.4" }
+testcontainers-cockroach = { module = "org.testcontainers:testcontainers-cockroachdb", version = "2.0.5" }
 testcontainers-postgres = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 
 # Build libraries
