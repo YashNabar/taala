@@ -1,6 +1,6 @@
 [versions]
 # Production dependency versions
-hibernateVersion = "7.3.4.Final"
+hibernateVersion = "7.3.5.Final"
 hikari = "7.0.2"
 jakartaVersion = "3.2.0"
 kotlinVersion = "2.2.20"
