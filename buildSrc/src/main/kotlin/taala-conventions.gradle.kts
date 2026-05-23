@@ -20,8 +20,7 @@ tasks.withType<KotlinJvmCompile>().configureEach {
         apiVersion.set(KotlinVersion.KOTLIN_2_1)
         javaParameters.set(true)
         freeCompilerArgs.addAll(
-            "-java-parameters",
-            "-Xjvm-default=all"
+            "-java-parameters"
         )
     }
 }
