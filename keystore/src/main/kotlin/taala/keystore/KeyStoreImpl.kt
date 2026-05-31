@@ -1,25 +1,5 @@
 package taala.keystore
 
-import java.io.ByteArrayInputStream
-import java.io.InputStream
-import java.io.OutputStream
-import java.security.Key
-import java.security.KeyFactory
-import java.security.KeyStoreException
-import java.security.KeyStoreSpi
-import java.security.PrivateKey
-import java.security.UnrecoverableKeyException
-import java.security.cert.Certificate
-import java.security.cert.CertificateException
-import java.security.cert.CertificateFactory
-import java.security.spec.InvalidKeySpecException
-import java.security.spec.PKCS8EncodedKeySpec
-import java.util.Collections
-import java.util.Date
-import java.util.Enumeration
-import javax.crypto.SecretKey
-import javax.crypto.spec.SecretKeySpec
-import javax.sql.DataSource
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import taala.persistence.entry.KeyStoreEntry
@@ -28,6 +8,24 @@ import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.HibernateHelper
 import taala.persistence.orm.HibernateHelper.withTransaction
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.security.Key
+import java.security.KeyStoreException
+import java.security.KeyStoreSpi
+import java.security.PrivateKey
+import java.security.UnrecoverableKeyException
+import java.security.cert.Certificate
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
+import java.security.spec.InvalidKeySpecException
+import java.util.Collections
+import java.util.Date
+import java.util.Enumeration
+import javax.crypto.AEADBadTagException
+import javax.crypto.SecretKey
+import javax.sql.DataSource
 
 @Suppress("TooManyFunctions")
 class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
@@ -35,17 +33,17 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
 
     override fun engineGetKey(alias: String?, password: CharArray?): Key? {
         if (alias == null) return null
-        return sessionFactory.openSession().use { session ->
-            when (val entry = session.find(KeyStoreEntry::class.java, alias)) {
-                is SecretKeyEntry -> SecretKeySpec(entry.secretKey, entry.keyType)
-                is PrivateKeyEntry -> try {
-                    KeyFactory.getInstance(entry.keyType).generatePrivate(PKCS8EncodedKeySpec(entry.privateKey))
-                } catch (e: InvalidKeySpecException) {
-                    logger.atError().log { "Failed to retrieve key with alias '$alias'. Cause: ${e.message}" }
-                    throw UnrecoverableKeyException("Failed to retrieve key with alias '$alias'.")
-                }
 
-                else -> null
+        return sessionFactory.openSession().use { session ->
+            val entry = session.find(KeyStoreEntry::class.java, alias) ?: return null
+            try {
+                entry.retrieveKey(password)
+            } catch (e: InvalidKeySpecException) {
+                logger.atError().log { "Failed to retrieve key with alias '$alias'. Cause: ${e.message}" }
+                throw UnrecoverableKeyException("Failed to retrieve key with alias '$alias'.")
+            } catch (e: AEADBadTagException) {
+                logger.atError().log { "Failed to retrieve key with alias '$alias'. Cause: ${e.message}" }
+                throw UnrecoverableKeyException("Failed to retrieve key with alias '$alias'.")
             }
         }
     }
@@ -97,17 +95,12 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     override fun engineSetKeyEntry(alias: String?, key: Key?, password: CharArray?, chain: Array<out Certificate>?) {
         requireNotNull(alias) { throw KeyStoreException("Alias was null. Key entry was not saved.") }
         requireNotNull(key) { throw KeyStoreException("Key was null. Key entry was not saved.") }
-        password?.let {
-            logger.atWarn().log {
-                "Password protection is not currently supported. Key entry with alias '$alias' will not be password-protected."
-            }
-        }
 
         val newEntry = when (key) {
-            is SecretKey -> SecretKeyEntry(alias, key)
+            is SecretKey -> SecretKeyEntry.new(alias, key, password)
             is PrivateKey -> {
                 requireNotNull(chain) { throw KeyStoreException("Certificate chain was null. Private key entry was not saved.") }
-                PrivateKeyEntry(alias, key, chain.toList())
+                PrivateKeyEntry.new(alias, key, chain.toList(), password)
             }
             else -> throw UnsupportedOperationException()
         }

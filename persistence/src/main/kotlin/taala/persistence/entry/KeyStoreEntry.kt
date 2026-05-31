@@ -4,6 +4,7 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import java.security.Key
 
 @Entity
 @Table(name = "keystore_entry")
@@ -29,8 +30,15 @@ class KeyStoreEntry(
     val keyType: String?,
 
     @Column(name = "salt", nullable = true)
-    val salt: String?,
+    val salt: ByteArray?,
 
     @Column(name = "iv", nullable = true)
-    val iv: String?,
-)
+    val iv: ByteArray?,
+) {
+    fun retrieveKey(password: CharArray?): Key? {
+        return when (this) {
+            is SecretKeyEntry, PrivateKeyEntry -> this.retrieveKey(password)
+            else -> null
+        }
+    }
+}
