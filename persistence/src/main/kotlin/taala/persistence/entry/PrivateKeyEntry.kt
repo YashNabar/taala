@@ -16,5 +16,7 @@ class PrivateKeyEntry(
     CertificateFactory.getInstance(chain.first().type).generateCertPath(chain).encoded,
     secretKey = null,
     chain.first().type,
-    privateKey.algorithm
+    privateKey.algorithm,
+    salt = null,
+    iv = null,
 )

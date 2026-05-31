@@ -27,4 +27,10 @@ class KeyStoreEntry(
 
     @Column(name = "key_type", nullable = true)
     val keyType: String?,
+
+    @Column(name = "salt", nullable = true)
+    val salt: String?,
+
+    @Column(name = "iv", nullable = true)
+    val iv: String?,
 )

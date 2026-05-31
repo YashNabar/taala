@@ -7,4 +7,13 @@ import javax.crypto.SecretKey
 class SecretKeyEntry(
     alias: String,
     secretKey: SecretKey
-) : KeyStoreEntry(alias, privateKey = null, chain = null, secretKey.encoded, certificateType = null, secretKey.algorithm)
+) : KeyStoreEntry(
+    alias,
+    privateKey = null,
+    chain = null,
+    secretKey.encoded,
+    certificateType = null,
+    secretKey.algorithm,
+    salt = null,
+    iv = null,
+)

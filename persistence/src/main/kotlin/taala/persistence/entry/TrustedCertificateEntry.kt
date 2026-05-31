@@ -15,4 +15,6 @@ class TrustedCertificateEntry(
     secretKey = null,
     certificate.type,
     keyType = null,
+    salt = null,
+    iv = null,
 )
