@@ -20,7 +20,7 @@ detektVersion = "1.23.8"
 
 [libraries]
 # Production libraries
-hibernate = { group = "org.hibernate", name = "hibernate-core", version.ref = "hibernateVersion" }
+hibernate = { group = "org.hibernate.orm", name = "hibernate-core", version.ref = "hibernateVersion" }
 jakarta = { group = "jakarta.persistence", name = "jakarta.persistence-api", version.ref = "jakartaVersion" }
 log4j-slf4j = { group = "org.apache.logging.log4j", name = "log4j-slf4j2-impl", version.ref = "log4j" }
 postgres-driver = { group = "org.postgresql", name = "postgresql", version.ref = "postgres"}
