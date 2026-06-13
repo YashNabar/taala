@@ -32,6 +32,7 @@ import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.PersistenceUtils
 import taala.persistence.orm.PersistenceUtils.withTransaction
+import java.security.UnrecoverableKeyException
 import java.security.spec.InvalidKeySpecException
 
 class KeyStoreImplIntegrationTest {
@@ -276,6 +277,16 @@ class KeyStoreImplIntegrationTest {
             val result = keyStore.engineGetKey(alias, null)
 
             assertThat(result).isEqualTo(testPrivateKey)
+        }
+
+        @Test
+        fun `given secret key is password-protected, when engineGetKey, then fails for incorrect password`() {
+            val password = UUID.randomUUID().toString().toCharArray()
+            keyStore.engineSetKeyEntry(alias, testSecretKey, password, null)
+
+            assertThrows<UnrecoverableKeyException> {
+                keyStore.engineGetKey(alias, password = "incorrect".toCharArray())
+            }
         }
     }
 
