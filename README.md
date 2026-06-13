@@ -29,5 +29,7 @@ Taala provider = new Taala(myDataSource);
 Security.addProvider(provider);
 
 KeyStore ks = KeyStore.getInstance("TaalaKeyStore", "Taala");
+
+// Database-backed keystore; InputStream and password are ignored. Individual keys may be password-protected.
 ks.load(null, null);
 ```
