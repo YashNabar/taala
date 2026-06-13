@@ -32,6 +32,7 @@ import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 import taala.persistence.orm.PersistenceUtils
 import taala.persistence.orm.PersistenceUtils.withTransaction
+import java.security.spec.InvalidKeySpecException
 
 class KeyStoreImplIntegrationTest {
     @BeforeEach
@@ -184,6 +185,19 @@ class KeyStoreImplIntegrationTest {
         }
 
         @Test
+        fun `given secret key, when engineSetKeyEntry with password, then assigns wrapped secret key to alias`() {
+            val password = UUID.randomUUID().toString().toCharArray()
+            keyStore.engineSetKeyEntry(alias, testSecretKey, password, null)
+
+            val result = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
+                val entity = session.find(SecretKeyEntry::class.java, alias)
+                SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
+            }
+
+            assertThat(result).isNotEqualTo(testSecretKey)
+        }
+
+        @Test
         fun `given private key with new alias, when engineSetKeyEntry, then assigns private key to alias`() {
             keyStore.engineSetKeyEntry(alias, testPrivateKey, null, listOf(testCertificateB).toTypedArray())
 
@@ -196,6 +210,21 @@ class KeyStoreImplIntegrationTest {
 
             assertThat(key).isEqualTo(testPrivateKey)
             assertThat(chain).isEqualTo(listOf(testCertificateB))
+        }
+
+        @Test
+        fun `given private key, when engineSetKeyEntry with password, then assigns wrapped private key to alias`() {
+            val password = UUID.randomUUID().toString().toCharArray()
+            keyStore.engineSetKeyEntry(alias, testPrivateKey, password, listOf(testCertificateB).toTypedArray())
+
+            val entry = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
+                session.find(PrivateKeyEntry::class.java, alias)
+            }
+
+            assertThrows<InvalidKeySpecException> {
+                KeyFactory.getInstance(PRIVATE_KEY_TYPE).generatePrivate(PKCS8EncodedKeySpec(entry.privateKey))
+            }
+
         }
 
         @Test
