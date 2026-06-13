@@ -9,7 +9,6 @@ version = rootProject.version
 
 dependencies {
     compileOnly(project(":persistence"))
-    implementation(project(":libs"))
     implementation(libs.jakarta)
     implementation(libs.hibernate)
     implementation(libs.slf4j.api)

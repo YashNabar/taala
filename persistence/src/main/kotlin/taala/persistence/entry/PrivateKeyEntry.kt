@@ -1,8 +1,8 @@
 package taala.persistence.entry
 
 import jakarta.persistence.Entity
-import taala.crypto.EncryptionOperations.unwrap
-import taala.crypto.EncryptionOperations.wrap
+import taala.persistence.crypto.EncryptionOperations.unwrap
+import taala.persistence.crypto.EncryptionOperations.wrap
 import java.security.Key
 import java.security.KeyFactory
 import java.security.PrivateKey

@@ -1,4 +1,4 @@
-package taala.crypto
+package taala.persistence.crypto
 
 import java.security.Key
 import java.security.SecureRandom

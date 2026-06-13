@@ -15,7 +15,6 @@ dependencyResolutionManagement {
 rootProject.name = "taala"
 
 include(
-    "libs",
     ":keystore",
     ":persistence",
     ":testing"

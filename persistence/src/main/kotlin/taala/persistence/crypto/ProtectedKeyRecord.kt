@@ -1,4 +1,4 @@
-package taala.crypto
+package taala.persistence.crypto
 
 data class ProtectedKeyRecord(
     val wrappedKey: ByteArray,
