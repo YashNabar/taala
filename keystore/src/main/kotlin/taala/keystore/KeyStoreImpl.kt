@@ -95,11 +95,7 @@ class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
     override fun engineSetKeyEntry(alias: String?, key: Key?, password: CharArray?, chain: Array<out Certificate>?) {
         requireNotNull(alias) { throw KeyStoreException("Alias was null. Key entry was not saved.") }
         requireNotNull(key) { throw KeyStoreException("Key was null. Key entry was not saved.") }
-        password?.let {
-            logger.atInfo().log {
-                "Key entry with alias '$alias' will be password-protected."
-            }
-        }
+        password?.let { logger.atInfo().log { "Key entry with alias '$alias' will be password-protected." } }
 
         val newEntry = when (key) {
             is SecretKey -> SecretKeyEntry.new(alias, key, password)
