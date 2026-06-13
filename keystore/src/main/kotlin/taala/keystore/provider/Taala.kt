@@ -35,7 +35,7 @@ class Taala(
     private val dataSource: DataSource
 ) : Provider(
     "Taala",
-    "1.2.0",
+    "1.3.0-SNAPSHOT",
     "A database-backed implementation provider of the Java cryptographic key store."
 ) {
     init {
