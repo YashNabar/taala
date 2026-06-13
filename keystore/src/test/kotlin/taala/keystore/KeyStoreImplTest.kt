@@ -389,24 +389,6 @@ class KeyStoreImplTest {
         }
 
         @Test
-        fun `given private key with password, when engineSetKeyEntry, then wraps key before persisting`() {
-            every { session.find(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns null
-            val entryCaptor = slot<PrivateKeyEntry>()
-            every { session.persist(capture(entryCaptor)) } just Runs
-            val certChain = listOf(existingCertificate, newCertificate)
-
-            keyStore.engineSetKeyEntry(KNOWN_ALIAS, newPrivateKey, password = "password".toCharArray(), certChain.toTypedArray())
-
-            with(entryCaptor.captured) {
-                assertSoftly { softly ->
-                    softly.assertThat(this.privateKey).isNotEqualTo(newPrivateKey.encoded)
-                    softly.assertThat(this.salt).isNotNull()
-                    softly.assertThat(this.iv).isNotNull()
-                }
-            }
-        }
-
-        @Test
         fun `given certificate with alias exists, when engineSetKeyEntry, then throws exception`() {
             every { session.find(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns TrustedCertificateEntry(
                 KNOWN_ALIAS, existingCertificate

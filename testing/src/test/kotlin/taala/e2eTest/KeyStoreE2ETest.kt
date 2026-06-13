@@ -19,7 +19,7 @@ import java.security.PrivateKey
 import java.security.Security
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
-import java.util.*
+import java.util.UUID
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.sql.DataSource
