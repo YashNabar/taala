@@ -46,7 +46,7 @@ import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
-import taala.persistence.orm.HibernateHelper
+import taala.persistence.orm.PersistenceUtils
 
 class KeyStoreImplTest {
 
@@ -75,6 +75,8 @@ class KeyStoreImplTest {
                     softly.assertThat(this.secretKey).isNull()
                     softly.assertThat(this.privateKey).isNull()
                     softly.assertThat(this.keyType).isNull()
+                    softly.assertThat(this.salt).isNull()
+                    softly.assertThat(this.iv).isNull()
                 }
             }
         }
@@ -99,13 +101,15 @@ class KeyStoreImplTest {
                     softly.assertThat(this.secretKey).isNull()
                     softly.assertThat(this.privateKey).isNull()
                     softly.assertThat(this.keyType).isNull()
+                    softly.assertThat(this.salt).isNull()
+                    softly.assertThat(this.iv).isNull()
                 }
             }
         }
 
         @Test
         fun `given key with alias exists, when engineSetCertificateEntry, then throws exception`() {
-            every { session.find(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns SecretKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns SecretKeyEntry.new(
                 KNOWN_ALIAS, existingSecretKey
             )
 
@@ -151,7 +155,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given certificate chain exists for private key, when engineGetCertificate, then returns first certificate`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
             )
 
@@ -164,7 +168,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given unrecoverable certificate, when engineGetCertificate, then returns null`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
             )
             mockkStatic(CertificateFactory::class)
@@ -209,7 +213,7 @@ class KeyStoreImplTest {
         @Test
         fun `given certificate chain exists for private key, when engineGetCertificateChain, then returns certificate chain`() {
             val chain = listOf(existingCertificate, newCertificate)
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, chain
             )
 
@@ -222,7 +226,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given unrecoverable certificate, when engineGetCertificateChain, then returns null`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
             )
             mockkStatic(CertificateFactory::class)
@@ -287,7 +291,7 @@ class KeyStoreImplTest {
         @Test
         fun `given a different entry exists for alias, when engineIsCertificateEntry, then returns false`() {
             every { session.find(TrustedCertificateEntry::class.java, any()) } returns null
-            every { session.find(PrivateKeyEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(PrivateKeyEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, mockk(relaxed = true), listOf(existingCertificate)
             )
 
@@ -328,6 +332,8 @@ class KeyStoreImplTest {
                     softly.assertThat(this.chain).isNull()
                     softly.assertThat(this.certificateType).isNull()
                     softly.assertThat(this.privateKey).isNull()
+                    softly.assertThat(this.salt).isNull()
+                    softly.assertThat(this.iv).isNull()
                 }
             }
         }
@@ -351,13 +357,15 @@ class KeyStoreImplTest {
                     softly.assertThat(capturedChain).isEqualTo(certChain)
                     softly.assertThat(this.certificateType).isEqualTo(existingCertificate.type)
                     softly.assertThat(this.secretKey).isNull()
+                    softly.assertThat(this.salt).isNull()
+                    softly.assertThat(this.iv).isNull()
                 }
             }
         }
 
         @Test
         fun `given secret key but private key with alias exists, when engineSetKeyEntry, then overwrites existing private key`() {
-            val existingEntry = PrivateKeyEntry(KNOWN_ALIAS, newPrivateKey, listOf(newCertificate))
+            val existingEntry = PrivateKeyEntry.new(KNOWN_ALIAS, newPrivateKey, listOf(newCertificate))
             every { session.find(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns existingEntry
             val entryCaptor = slot<SecretKeyEntry>()
 
@@ -374,6 +382,8 @@ class KeyStoreImplTest {
                     softly.assertThat(this.chain).isNull()
                     softly.assertThat(this.privateKey).isNull()
                     softly.assertThat(this.certificateType).isNull()
+                    softly.assertThat(this.salt).isNull()
+                    softly.assertThat(this.iv).isNull()
                 }
             }
         }
@@ -421,7 +431,7 @@ class KeyStoreImplTest {
     inner class GetKeyTests {
         @Test
         fun `given secret key exists, when engineGetKey, then returns secret key`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry.new(
                 KNOWN_ALIAS, existingSecretKey
             )
 
@@ -434,7 +444,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given private key exists, when engineGetKey, then returns private key`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
             )
 
@@ -447,7 +457,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given unrecoverable private key, when engineGetKey, then throws exception`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
             )
             mockkStatic(KeyFactory::class)
@@ -493,7 +503,7 @@ class KeyStoreImplTest {
     inner class IsKeyEntryTests {
         @Test
         fun `given secret key exists for alias, when engineIsKeyEntry, then returns true`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry.new(
                 KNOWN_ALIAS, existingSecretKey
             )
 
@@ -504,7 +514,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given private key exists for alias, when engineIsKeyEntry, then returns true`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
             )
 
@@ -573,7 +583,7 @@ class KeyStoreImplTest {
     inner class ContainsAliasTests {
         @Test
         fun `given secret key exists for alias, when engineContainsAlias, then returns true`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns SecretKeyEntry.new(
                 KNOWN_ALIAS, existingSecretKey
             )
 
@@ -584,7 +594,7 @@ class KeyStoreImplTest {
 
         @Test
         fun `given private key exists for alias, when engineContainsAlias, then returns true`() {
-            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry(
+            every { session.find(KeyStoreEntry::class.java, any()) } returns PrivateKeyEntry.new(
                 KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate)
             )
 
@@ -653,7 +663,7 @@ class KeyStoreImplTest {
     inner class DeleteEntryTests {
         @Test
         fun `given entry exists, when engineDeleteEntry, then removes entry`() {
-            val testEntry = PrivateKeyEntry(KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate))
+            val testEntry = PrivateKeyEntry.new(KNOWN_ALIAS, newPrivateKey, listOf(existingCertificate))
             every { session.find(KeyStoreEntry::class.java, any()) } returns testEntry
 
             keyStore.engineDeleteEntry(KNOWN_ALIAS)
@@ -718,8 +728,8 @@ class KeyStoreImplTest {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            mockkObject(HibernateHelper)
-            every { HibernateHelper.buildSessionFactory(any()) } returns sessionFactory
+            mockkObject(PersistenceUtils)
+            every { PersistenceUtils.buildSessionFactory(any()) } returns sessionFactory
             keyStore = KeyStoreImpl(dataSource)
         }
 

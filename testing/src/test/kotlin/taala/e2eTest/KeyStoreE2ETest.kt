@@ -19,7 +19,7 @@ import java.security.PrivateKey
 import java.security.Security
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
-import java.util.*
+import java.util.UUID
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.sql.DataSource
@@ -36,8 +36,14 @@ class KeyStoreE2ETest {
         logger.atInfo().log { "[${database}] Starting test: can store and retrieve private key from key store" }
         `can store and retrieve private key from key store`(alias = UUID.randomUUID().toString())
 
+        logger.atInfo().log { "[${database}] Starting test: can store and retrieve password-protected private key from key store" }
+        `can store and retrieve password-protected private key from key store`(alias = UUID.randomUUID().toString())
+
         logger.atInfo().log { "[${database}] Starting test: can store and retrieve secret key from key store" }
         `can store and retrieve secret key from key store`(alias = UUID.randomUUID().toString())
+
+        logger.atInfo().log { "[${database}] Starting test: can store and retrieve password-protected secret key from key store" }
+        `can store and retrieve password-protected secret key from key store`(alias = UUID.randomUUID().toString())
 
         logger.atInfo().log { "[${database}] Starting test: can delete all entry types from key store" }
         `can delete all entry types from key store`()
@@ -70,9 +76,35 @@ class KeyStoreE2ETest {
         }
     }
 
+    fun `can store and retrieve password-protected private key from key store`(alias: String) {
+        val certificateChain = arrayOf(testCertificateA, testCertificateB)
+        val password = "password".toCharArray()
+
+        keyStore.setKeyEntry(alias, testPrivateKey, password, certificateChain)
+        val privateKeyFromKeyStore = keyStore.getKey(alias, password)
+        val certChainFromKeyStore = keyStore.getCertificateChain(alias)
+
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isKeyEntry(alias)).isTrue()
+            softly.assertThat(privateKeyFromKeyStore).isEqualTo(testPrivateKey)
+            softly.assertThat(certChainFromKeyStore).isEqualTo(certificateChain)
+        }
+    }
+
     fun `can store and retrieve secret key from key store`(alias: String) {
         keyStore.setKeyEntry(alias, testSecretKey, null, null)
         val secretKeyFromKeyStore = keyStore.getKey(alias, null)
+
+        assertSoftly { softly ->
+            softly.assertThat(keyStore.isKeyEntry(alias)).isTrue()
+            softly.assertThat(secretKeyFromKeyStore).isEqualTo(testSecretKey)
+        }
+    }
+
+    fun `can store and retrieve password-protected secret key from key store`(alias: String) {
+        val password = "password".toCharArray()
+        keyStore.setKeyEntry(alias, testSecretKey, password, null)
+        val secretKeyFromKeyStore = keyStore.getKey(alias, password)
 
         assertSoftly { softly ->
             softly.assertThat(keyStore.isKeyEntry(alias)).isTrue()

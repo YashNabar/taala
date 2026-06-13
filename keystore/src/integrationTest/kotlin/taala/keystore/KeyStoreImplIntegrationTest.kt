@@ -30,8 +30,10 @@ import taala.keystore.provider.Taala
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
-import taala.persistence.orm.HibernateHelper
-import taala.persistence.orm.HibernateHelper.withTransaction
+import taala.persistence.orm.PersistenceUtils
+import taala.persistence.orm.PersistenceUtils.withTransaction
+import java.security.UnrecoverableKeyException
+import java.security.spec.InvalidKeySpecException
 
 class KeyStoreImplIntegrationTest {
     @BeforeEach
@@ -58,7 +60,7 @@ class KeyStoreImplIntegrationTest {
         fun `given certificate with new alias, when engineSetCertificateEntry, then assigns certificate to alias`() {
             keyStore.engineSetCertificateEntry(alias, testCertificateB)
 
-            val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            val result = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val entity = session.find(TrustedCertificateEntry::class.java, alias)
                 CertificateFactory.getInstance(CERTIFICATE_TYPE)
                     .generateCertPath(ByteArrayInputStream(entity.chain))
@@ -71,9 +73,9 @@ class KeyStoreImplIntegrationTest {
         @Test
         fun `given alias assigned to different entity, when engineSetCertificateEntry, then throws exception`() {
             val someKey = secretKeyFactory.generateKey()
-            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val transaction = session.beginTransaction()
-                session.persist(SecretKeyEntry(alias, someKey))
+                session.persist(SecretKeyEntry.new(alias, someKey))
                 transaction.commit()
             }
 
@@ -90,7 +92,7 @@ class KeyStoreImplIntegrationTest {
 
             keyStore.engineSetCertificateEntry(alias, testCertificateB)
 
-            val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            val result = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val entity = session.find(TrustedCertificateEntry::class.java, alias)
                 CertificateFactory.getInstance(CERTIFICATE_TYPE)
                     .generateCertPath(ByteArrayInputStream(entity.chain))
@@ -104,7 +106,7 @@ class KeyStoreImplIntegrationTest {
     inner class GetCertificateTests {
         @Test
         fun `given certificate exists, when engineGetCertificate, then returns certificate`() {
-            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val tx = session.beginTransaction()
                 session.persist(TrustedCertificateEntry(alias, testCertificateB))
                 tx.commit()
@@ -117,9 +119,9 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given certificate chain exists for private key, when engineGetCertificate, then returns first certificate`() {
-            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val tx = session.beginTransaction()
-                session.persist(PrivateKeyEntry(alias, privateKey = testPrivateKey, chain = listOf(testCertificateA, testCertificateB)))
+                session.persist(PrivateKeyEntry.new(alias, privateKey = testPrivateKey, chain = listOf(testCertificateA, testCertificateB)))
                 tx.commit()
             }
 
@@ -134,9 +136,9 @@ class KeyStoreImplIntegrationTest {
         @Test
         fun `given certificate chain exists for private key, when engineGetCertificateChain, then returns certificate chain`() {
             val chain = listOf(testCertificateA, testCertificateB)
-            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val tx = session.beginTransaction()
-                session.persist(PrivateKeyEntry(alias, privateKey = testPrivateKey, chain = chain))
+                session.persist(PrivateKeyEntry.new(alias, privateKey = testPrivateKey, chain = chain))
                 tx.commit()
             }
 
@@ -150,7 +152,7 @@ class KeyStoreImplIntegrationTest {
     inner class IsCertificateEntryTests {
         @Test
         fun `given certificate exists for alias, when engineIsCertificateEntry, then returns true`() {
-            HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val tx = session.beginTransaction()
                 session.persist(TrustedCertificateEntry(alias, testCertificateB))
                 tx.commit()
@@ -175,7 +177,7 @@ class KeyStoreImplIntegrationTest {
         fun `given secret key with new alias, when engineSetKeyEntry, then assigns secret key to alias`() {
             keyStore.engineSetKeyEntry(alias, testSecretKey, null, null)
 
-            val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            val result = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val entity = session.find(SecretKeyEntry::class.java, alias)
                 SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
             }
@@ -184,10 +186,23 @@ class KeyStoreImplIntegrationTest {
         }
 
         @Test
+        fun `given secret key, when engineSetKeyEntry with password, then assigns wrapped secret key to alias`() {
+            val password = UUID.randomUUID().toString().toCharArray()
+            keyStore.engineSetKeyEntry(alias, testSecretKey, password, null)
+
+            val result = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
+                val entity = session.find(SecretKeyEntry::class.java, alias)
+                SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
+            }
+
+            assertThat(result).isNotEqualTo(testSecretKey)
+        }
+
+        @Test
         fun `given private key with new alias, when engineSetKeyEntry, then assigns private key to alias`() {
             keyStore.engineSetKeyEntry(alias, testPrivateKey, null, listOf(testCertificateB).toTypedArray())
 
-            val (key, chain) = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            val (key, chain) = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val entity = session.find(PrivateKeyEntry::class.java, alias)
                 val key = KeyFactory.getInstance(PRIVATE_KEY_TYPE).generatePrivate(PKCS8EncodedKeySpec(entity.privateKey))
                 val chain = certificateFactory.generateCertPath(ByteArrayInputStream(entity.chain)).certificates
@@ -199,8 +214,23 @@ class KeyStoreImplIntegrationTest {
         }
 
         @Test
+        fun `given private key, when engineSetKeyEntry with password, then assigns wrapped private key to alias`() {
+            val password = UUID.randomUUID().toString().toCharArray()
+            keyStore.engineSetKeyEntry(alias, testPrivateKey, password, listOf(testCertificateB).toTypedArray())
+
+            val entry = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
+                session.find(PrivateKeyEntry::class.java, alias)
+            }
+
+            assertThrows<InvalidKeySpecException> {
+                KeyFactory.getInstance(PRIVATE_KEY_TYPE).generatePrivate(PKCS8EncodedKeySpec(entry.privateKey))
+            }
+
+        }
+
+        @Test
         fun `given alias assigned to different entity, when engineSetKeyEntry, then throws exception`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
                 session.persist(TrustedCertificateEntry(alias, testCertificateA))
             }
 
@@ -217,7 +247,7 @@ class KeyStoreImplIntegrationTest {
 
             keyStore.engineSetKeyEntry(alias, testSecretKey, null, null)
 
-            val result = HibernateHelper.buildSessionFactory(dataSource).openSession().use { session ->
+            val result = PersistenceUtils.buildSessionFactory(dataSource).openSession().use { session ->
                 val entity = session.find(SecretKeyEntry::class.java, alias)
                 SecretKeySpec(entity.secretKey, SECRET_KEY_TYPE)
             }
@@ -229,8 +259,8 @@ class KeyStoreImplIntegrationTest {
     inner class GetKeyTests {
         @Test
         fun `given secret key exists, when engineGetKey, then returns secret key`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
-                session.persist(SecretKeyEntry(alias, testSecretKey))
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry.new(alias, testSecretKey))
             }
 
             val result = keyStore.engineGetKey(alias, null)
@@ -240,13 +270,23 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given private key exists, when engineGetKey, then returns private key`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
-                session.persist(PrivateKeyEntry(alias, testPrivateKey, listOf(testCertificateA)))
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(PrivateKeyEntry.new(alias, testPrivateKey, listOf(testCertificateA)))
             }
 
             val result = keyStore.engineGetKey(alias, null)
 
             assertThat(result).isEqualTo(testPrivateKey)
+        }
+
+        @Test
+        fun `given secret key is password-protected, when engineGetKey, then fails for incorrect password`() {
+            val password = UUID.randomUUID().toString().toCharArray()
+            keyStore.engineSetKeyEntry(alias, testSecretKey, password, null)
+
+            assertThrows<UnrecoverableKeyException> {
+                keyStore.engineGetKey(alias, password = "incorrect".toCharArray())
+            }
         }
     }
 
@@ -254,8 +294,8 @@ class KeyStoreImplIntegrationTest {
     inner class IsKeyEntryTests {
         @Test
         fun `given secret key exists for alias, when engineIsKeyEntry, then returns true`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
-                session.persist(SecretKeyEntry(alias, testSecretKey))
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry.new(alias, testSecretKey))
             }
 
             val result = keyStore.engineIsKeyEntry(alias)
@@ -265,8 +305,8 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given private key exists for alias, when engineIsKeyEntry, then returns true`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
-                session.persist(PrivateKeyEntry(alias, testPrivateKey, listOf(testCertificateA)))
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(PrivateKeyEntry.new(alias, testPrivateKey, listOf(testCertificateA)))
             }
 
             val result = keyStore.engineIsKeyEntry(alias)
@@ -290,11 +330,11 @@ class KeyStoreImplIntegrationTest {
                 it.execute("TRUNCATE TABLE keystore_entry")
             }
             val entries = setOf(
-                SecretKeyEntry("one", testSecretKey),
-                PrivateKeyEntry("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
+                SecretKeyEntry.new("one", testSecretKey),
+                PrivateKeyEntry.new("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
                 TrustedCertificateEntry("three", testCertificateA),
             )
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
                 entries.forEach { entry ->
                     session.persist(entry)
                 }
@@ -310,8 +350,8 @@ class KeyStoreImplIntegrationTest {
     inner class ContainsAliasTests {
         @Test
         fun `given secret key exists for alias, when engineContainsAlias, then returns true`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
-                session.persist(SecretKeyEntry(alias, testSecretKey))
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(SecretKeyEntry.new(alias, testSecretKey))
             }
 
             val result = keyStore.engineContainsAlias(alias)
@@ -321,8 +361,8 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given private key exists for alias, when engineContainsAlias, then returns true`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
-                session.persist(PrivateKeyEntry(alias, testPrivateKey, listOf(testCertificateA)))
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
+                session.persist(PrivateKeyEntry.new(alias, testPrivateKey, listOf(testCertificateA)))
             }
 
             val result = keyStore.engineContainsAlias(alias)
@@ -332,7 +372,7 @@ class KeyStoreImplIntegrationTest {
 
         @Test
         fun `given certificate exists for alias, when engineContainsAlias, then returns true`() {
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
                 session.persist(TrustedCertificateEntry(alias, testCertificateA))
             }
 
@@ -357,11 +397,11 @@ class KeyStoreImplIntegrationTest {
                 it.execute("TRUNCATE TABLE keystore_entry")
             }
             val entries = setOf(
-                SecretKeyEntry("one", testSecretKey),
-                PrivateKeyEntry("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
+                SecretKeyEntry.new("one", testSecretKey),
+                PrivateKeyEntry.new("two", testPrivateKey, listOf(testCertificateA, testCertificateB)),
                 TrustedCertificateEntry("three", testCertificateA),
             )
-            HibernateHelper.buildSessionFactory(dataSource).withTransaction { session ->
+            PersistenceUtils.buildSessionFactory(dataSource).withTransaction { session ->
                 entries.forEach { entry ->
                     session.persist(entry)
                 }
@@ -377,9 +417,9 @@ class KeyStoreImplIntegrationTest {
     inner class DeleteEntryTests {
         @Test
         fun `given entry exists, when engineDeleteEntry, then removes entry from key store`() {
-            val sessionFactory = HibernateHelper.buildSessionFactory(dataSource)
+            val sessionFactory = PersistenceUtils.buildSessionFactory(dataSource)
             sessionFactory.withTransaction { session ->
-                session.persist(PrivateKeyEntry(alias, testPrivateKey, listOf(testCertificateA, testCertificateB)))
+                session.persist(PrivateKeyEntry.new(alias, testPrivateKey, listOf(testCertificateA, testCertificateB)))
             }
 
             keyStore.engineDeleteEntry(alias)
