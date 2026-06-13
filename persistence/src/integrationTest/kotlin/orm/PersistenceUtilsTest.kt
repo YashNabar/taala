@@ -8,13 +8,13 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
-import taala.persistence.orm.HibernateHelper
+import taala.persistence.orm.PersistenceUtils
 
-class HibernateHelperTest {
+class PersistenceUtilsTest {
 
     @Test
     fun `given postgres datasource, when buildSessionFactory, then returns session factory`() {
-        val sessionFactory = HibernateHelper.buildSessionFactory(
+        val sessionFactory = PersistenceUtils.buildSessionFactory(
             HikariDataSource(
                 HikariConfig().apply {
                     jdbcUrl = database.jdbcUrl

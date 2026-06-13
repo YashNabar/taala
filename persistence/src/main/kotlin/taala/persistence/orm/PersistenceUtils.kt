@@ -12,7 +12,7 @@ import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
 
-object HibernateHelper {
+object PersistenceUtils {
     fun buildSessionFactory(datasource: DataSource): SessionFactory {
         return StandardServiceRegistryBuilder().applySettings(getDbProperties(datasource)).build().run {
             Configuration()

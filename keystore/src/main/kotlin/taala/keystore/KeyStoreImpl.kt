@@ -6,8 +6,8 @@ import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
-import taala.persistence.orm.HibernateHelper
-import taala.persistence.orm.HibernateHelper.withTransaction
+import taala.persistence.orm.PersistenceUtils
+import taala.persistence.orm.PersistenceUtils.withTransaction
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -29,7 +29,7 @@ import javax.sql.DataSource
 
 @Suppress("TooManyFunctions")
 class KeyStoreImpl(dataSource: DataSource) : KeyStoreSpi() {
-    private val sessionFactory = HibernateHelper.buildSessionFactory(dataSource)
+    private val sessionFactory = PersistenceUtils.buildSessionFactory(dataSource)
 
     override fun engineGetKey(alias: String?, password: CharArray?): Key? {
         if (alias == null) return null

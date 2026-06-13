@@ -1,4 +1,4 @@
-package taala.persistence
+package taala.persistence.orm
 
 import io.mockk.Runs
 import io.mockk.every
@@ -6,15 +6,15 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
-import java.security.KeyStoreException
-import java.sql.SQLException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.Transaction
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import taala.persistence.orm.HibernateHelper.withTransaction
+import taala.persistence.orm.PersistenceUtils.withTransaction
+import java.security.KeyStoreException
+import java.sql.SQLException
 
 class PersistenceUtilsTest {
     private val tx = mockk<Transaction> {

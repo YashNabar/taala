@@ -46,7 +46,7 @@ import taala.persistence.entry.KeyStoreEntry
 import taala.persistence.entry.PrivateKeyEntry
 import taala.persistence.entry.SecretKeyEntry
 import taala.persistence.entry.TrustedCertificateEntry
-import taala.persistence.orm.HibernateHelper
+import taala.persistence.orm.PersistenceUtils
 
 class KeyStoreImplTest {
 
@@ -384,6 +384,24 @@ class KeyStoreImplTest {
                     softly.assertThat(this.certificateType).isNull()
                     softly.assertThat(this.salt).isNull()
                     softly.assertThat(this.iv).isNull()
+                }
+            }
+        }
+
+        @Test
+        fun `given private key with password, when engineSetKeyEntry, then wraps key before persisting`() {
+            every { session.find(KeyStoreEntry::class.java, KNOWN_ALIAS) } returns null
+            val entryCaptor = slot<PrivateKeyEntry>()
+            every { session.persist(capture(entryCaptor)) } just Runs
+            val certChain = listOf(existingCertificate, newCertificate)
+
+            keyStore.engineSetKeyEntry(KNOWN_ALIAS, newPrivateKey, password = "password".toCharArray(), certChain.toTypedArray())
+
+            with(entryCaptor.captured) {
+                assertSoftly { softly ->
+                    softly.assertThat(this.privateKey).isNotEqualTo(newPrivateKey.encoded)
+                    softly.assertThat(this.salt).isNotNull()
+                    softly.assertThat(this.iv).isNotNull()
                 }
             }
         }
@@ -728,8 +746,8 @@ class KeyStoreImplTest {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            mockkObject(HibernateHelper)
-            every { HibernateHelper.buildSessionFactory(any()) } returns sessionFactory
+            mockkObject(PersistenceUtils)
+            every { PersistenceUtils.buildSessionFactory(any()) } returns sessionFactory
             keyStore = KeyStoreImpl(dataSource)
         }
 

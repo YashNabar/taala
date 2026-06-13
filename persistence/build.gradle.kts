@@ -16,6 +16,7 @@ dependencies {
 
     runtimeOnly(libs.log4j.slf4j)
 
+    testImplementation(project(":libs"))
     testImplementation(libs.bundles.test)
     integrationTestImplementation(libs.bundles.test)
     integrationTestImplementation(libs.bundles.integration.test)
