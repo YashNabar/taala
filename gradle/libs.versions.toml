@@ -1,18 +1,18 @@
 [versions]
 # Production dependency versions
-hibernateVersion = "7.4.2.Final"
+hibernateVersion = "7.4.3.Final"
 hikari = "7.1.0"
 jakartaVersion = "3.2.0"
 kotlinVersion = "2.4.0"
-log4j = "2.26.0"
+log4j = "2.26.1"
 mockk = "1.14.5"
-postgres = "42.7.11"
+postgres = "42.7.12"
 slf4j = "2.0.18"
 
 # Test dependency versions
 assertjVersion = "3.27.7"
-junit5Version = "6.1.0"
-junit-platform-suite = "6.1.0"
+junit5Version = "6.1.1"
+junit-platform-suite = "6.1.1"
 testcontainers = "1.21.4"
 
 # Build dependency versions
